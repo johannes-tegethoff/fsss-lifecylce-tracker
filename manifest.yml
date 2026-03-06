@@ -1,0 +1,28 @@
+modules:
+  jira:globalPage:
+    - key: service-lifecycle-tracker
+      resource: main
+      resolver:
+        function: resolver
+      title: Service Lifecycle Tracker
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: static/hello-world/build
+permissions:
+  scopes:
+    - read:jira-work
+    - read:jira-user
+    - read:servicedesk-request
+  external:
+    fetch:
+      backend:
+        - address: api.atlassian.com
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 512
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/4779b8c2-238b-4c6f-8b46-073e33ad45f5

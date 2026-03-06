@@ -1,0 +1,548 @@
+/**
+ * Service Lifecycle Tracker - Pipeline UI Styles
+ */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+.app {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 16px;
+    max-width: 1600px;
+    margin: 0 auto;
+    background-color: #f4f5f7;
+    min-height: 100vh;
+}
+
+
+
+/* === Loading & Error === */
+.loading, .error {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0052CC;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error h2 {
+    color: #DE350B;
+    margin-bottom: 12px;
+}
+
+/* === Upcoming Events === */
+.upcoming-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.upcoming-section {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.upcoming-section h4 {
+    font-size: 14px;
+    color: #6B778C;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.upcoming-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.upcoming-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: #F4F5F7;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.upcoming-icon {
+    font-size: 16px;
+}
+
+.upcoming-date {
+    font-weight: 600;
+    color: #0052CC;
+    min-width: 50px;
+}
+
+.upcoming-label {
+    color: #6B778C;
+    min-width: 100px;
+}
+
+.upcoming-customer {
+    font-weight: 500;
+    color: #172B4D;
+    flex: 1;
+}
+
+.upcoming-unit {
+    color: #6B778C;
+    font-size: 12px;
+}
+
+.upcoming-more {
+    font-size: 12px;
+    color: #6B778C;
+    text-align: center;
+    padding: 4px;
+}
+
+
+
+/* === Filter Section === */
+.filter-section {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 14px;
+    border: 2px solid #DFE1E6;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #0052CC;
+}
+
+.filter-select {
+    padding: 10px 14px;
+    border: 2px solid #DFE1E6;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #0052CC;
+}
+
+/* === Pipeline Legend === */
+.pipeline-legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #6B778C;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.dot-yellow { background: #FFAB00; }
+.dot-orange { background: #FF8B00; }
+.dot-green { background: #36B37E; }
+.dot-gray { background: #DFE1E6; }
+.dot-red { background: #DE350B; }
+
+/* === Customer Sections === */
+.customer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.customer-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.customer-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    background: #F4F5F7;
+    border-bottom: 1px solid #DFE1E6;
+    transition: background-color 0.2s;
+}
+
+.customer-header:hover {
+    background: #EBECF0;
+}
+
+.customer-toggle {
+    font-size: 12px;
+    color: #6B778C;
+    margin-right: 10px;
+}
+
+.customer-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #172B4D;
+    margin: 0;
+    flex: 1;
+}
+
+.customer-count {
+    font-size: 13px;
+    color: #6B778C;
+    background: white;
+    padding: 4px 10px;
+    border-radius: 10px;
+}
+
+.customer-units {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* === Unit Pipeline === */
+.unit-pipeline {
+    border: 1px solid #DFE1E6;
+    border-radius: 8px;
+    padding: 12px;
+    background: #FAFBFC;
+}
+
+.unit-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.unit-name {
+    font-weight: 600;
+    color: #172B4D;
+    font-size: 14px;
+}
+
+.unit-service {
+    background: #DEEBFF;
+    color: #0052CC;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.unit-dates {
+    display: flex;
+    gap: 12px;
+    margin-left: auto;
+    font-size: 12px;
+    color: #6B778C;
+}
+
+.unit-dates span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.date-separator {
+    color: #DFE1E6;
+    font-weight: 300;
+}
+
+/* === Pipeline Stages === */
+.pipeline-stages {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+}
+
+.pipeline-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #B3BAC5;
+    font-size: 14px;
+    padding: 0 4px;
+    margin-top: 40px;
+}
+
+.pipeline-stage-wrapper {
+    flex: 1;
+    min-width: 120px;
+    max-width: 200px;
+}
+
+.pipeline-stage {
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pipeline-stage.clickable {
+    cursor: pointer;
+}
+
+.pipeline-stage.clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stage-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    opacity: 0.8;
+}
+
+.stage-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stage-key {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.stage-key-link {
+    color: inherit;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.stage-key-link:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    text-decoration: underline;
+}
+
+.stage-status {
+    font-size: 11px;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.expand-icon {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.stage-empty {
+    font-size: 14px;
+    opacity: 0.5;
+    padding: 8px 0;
+}
+
+/* Stage Progress Bar */
+.stage-progress {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 4px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+/* Stage Colors */
+.stage-gray {
+    background: #F4F5F7;
+    color: #6B778C;
+    border: 2px dashed #DFE1E6;
+}
+
+.stage-yellow {
+    background: linear-gradient(135deg, #FFAB00 0%, #FF991F 100%);
+    color: white;
+}
+
+.stage-orange {
+    background: linear-gradient(135deg, #FF8B00 0%, #FF5630 100%);
+    color: white;
+}
+
+.stage-green {
+    background: linear-gradient(135deg, #36B37E 0%, #00875A 100%);
+    color: white;
+}
+
+.stage-red {
+    background: linear-gradient(135deg, #DE350B 0%, #BF2600 100%);
+    color: white;
+}
+
+/* === Epic Tasks Dropdown === */
+.epic-tasks {
+    margin-top: 8px;
+    background: white;
+    border-radius: 6px;
+    padding: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #DFE1E6;
+}
+
+.epic-tasks-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6B778C;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #DFE1E6;
+}
+
+.epic-task-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.epic-task-item:hover {
+    background: #F4F5F7;
+}
+
+.task-status-icon {
+    font-size: 14px;
+    min-width: 16px;
+}
+
+.task-key-link {
+    color: #0052CC;
+    text-decoration: none;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.task-key-link:hover {
+    text-decoration: underline;
+}
+
+.task-summary {
+    color: #172B4D;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.epic-tasks-more {
+    font-size: 11px;
+    color: #6B778C;
+    text-align: center;
+    padding: 4px;
+    margin-top: 4px;
+}
+
+/* === Responsive Design === */
+@media (max-width: 900px) {
+    .pipeline-stages {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .pipeline-arrow {
+        display: none;
+    }
+    
+    .pipeline-stage {
+        min-width: calc(50% - 4px);
+        max-width: none;
+    }
+    
+    .unit-dates {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 8px;
+    }
+}
+
+@media (max-width: 600px) {
+    .app {
+        padding: 8px;
+    }
+    
+    .pipeline-stage {
+        min-width: 100%;
+    }
+    
+    .summary-section {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .filter-section {
+        flex-direction: column;
+    }
+    
+    .search-input,
+    .filter-select {
+        width: 100%;
+    }
+}
