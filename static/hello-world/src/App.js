@@ -2,6 +2,45 @@ import React, { useEffect, useState } from 'react';
 import { invoke } from '@forge/bridge';
 import './App.css';
 
+// Material UI imports
+import {
+    Box,
+    Container,
+    TextField,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+    CircularProgress,
+    Alert,
+    AlertTitle,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
+    Typography,
+    Chip,
+    Card,
+    CardContent,
+    Link,
+    Collapse,
+    List,
+    ListItem,
+    ListItemIcon,
+    ListItemText,
+    Paper,
+    Stack,
+    Divider,
+    LinearProgress,
+} from '@mui/material';
+import {
+    ExpandMore as ExpandMoreIcon,
+    CheckCircle as CheckCircleIcon,
+    HourglassEmpty as HourglassIcon,
+    RadioButtonUnchecked as OpenIcon,
+    Business as BusinessIcon,
+    Search as SearchIcon,
+} from '@mui/icons-material';
+
 /**
  * Service Lifecycle Tracker - Pipeline View
  * 
@@ -298,22 +337,32 @@ function App() {
         if (filteredUnits.length === 0) return null;
         
         return (
-            <div key={customer.id} className="customer-section">
-                <div 
-                    className="customer-header"
-                    onClick={() => toggleCustomer(customer.id)}
-                >
-                    <span className="customer-toggle">{isExpanded ? '▼' : '▶'}</span>
-                    <h3 className="customer-name">🏢 {customer.label}</h3>
-                    <span className="customer-count">({filteredUnits.length} Units)</span>
-                </div>
-                
-                {isExpanded && (
-                    <div className="customer-units">
+            <Accordion 
+                key={customer.id}
+                expanded={isExpanded}
+                onChange={() => toggleCustomer(customer.id)}
+                sx={{ mb: 1.5 }}
+            >
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                        <BusinessIcon sx={{ color: 'text.secondary' }} />
+                        <Typography variant="h6" sx={{ flex: 1 }}>
+                            {customer.label}
+                        </Typography>
+                        <Chip 
+                            label={`${filteredUnits.length} Units`}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                        />
+                    </Stack>
+                </AccordionSummary>
+                <AccordionDetails>
+                    <Stack spacing={1.5}>
                         {filteredUnits.map(renderUnitPipeline)}
-                    </div>
-                )}
-            </div>
+                    </Stack>
+                </AccordionDetails>
+            </Accordion>
         );
     };
 
@@ -329,103 +378,151 @@ function App() {
         };
         
         return (
-            <div className="upcoming-section">
-                <h4>{title}</h4>
-                <div className="upcoming-list">
-                    {events.slice(0, 5).map((event, idx) => (
-                        <div key={idx} className="upcoming-item">
-                            <span className="upcoming-icon">{typeColors[event.type] || '📅'}</span>
-                            <span className="upcoming-date">{formatDateShort(event.date)}</span>
-                            <span className="upcoming-label">{event.label}</span>
-                            <span className="upcoming-customer">{event.customer}</span>
-                            <span className="upcoming-unit">{event.unit}</span>
-                        </div>
-                    ))}
+            <Card sx={{ height: '100%' }}>
+                <CardContent>
+                    <Typography variant="caption" color="text.secondary" gutterBottom>
+                        {title}
+                    </Typography>
+                    <List dense>
+                        {events.slice(0, 5).map((event, idx) => (
+                            <ListItem key={idx} sx={{ px: 0 }}>
+                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                    {typeColors[event.type] || '📅'}
+                                </ListItemIcon>
+                                <ListItemText
+                                    primary={
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <Typography variant="body2" fontWeight="bold" color="primary">
+                                                {formatDateShort(event.date)}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {event.label}
+                                            </Typography>
+                                        </Stack>
+                                    }
+                                    secondary={
+                                        <Typography variant="caption" color="text.secondary">
+                                            {event.customer} - {event.unit}
+                                        </Typography>
+                                    }
+                                />
+                            </ListItem>
+                        ))}
+                    </List>
                     {events.length > 5 && (
-                        <div className="upcoming-more">+{events.length - 5} more</div>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                            +{events.length - 5} weitere
+                        </Typography>
                     )}
-                </div>
-            </div>
+                </CardContent>
+            </Card>
         );
     };
 
     // Loading state
     if (loading) {
         return (
-            <div className="app">
-                <div className="loading">
-                    <div className="spinner"></div>
-                    <p>Loading Service Lifecycle Data...</p>
-                </div>
-            </div>
+            <Container maxWidth="lg" sx={{ py: 4 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 8 }}>
+                    <CircularProgress size={60} />
+                    <Typography variant="body1" color="text.secondary">
+                        Loading Service Lifecycle Data...
+                    </Typography>
+                </Box>
+            </Container>
         );
     }
 
     // Error state
     if (error) {
         return (
-            <div className="app">
-                <div className="error">
-                    <h2>❌ Error Loading Data</h2>
-                    <p>{error}</p>
-                </div>
-            </div>
+            <Container maxWidth="lg" sx={{ py: 4 }}>
+                <Alert severity="error">
+                    <AlertTitle>Error Loading Data</AlertTitle>
+                    {error}
+                </Alert>
+            </Container>
         );
     }
 
     const serviceTypes = getServiceTypes();
 
     return (
-        <div className="app">
+        <Container maxWidth="xl" sx={{ py: 2 }}>
             {/* Upcoming Events */}
-            <div className="upcoming-container">
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 2, mb: 2 }}>
                 {renderUpcomingEvents(data.upcomingThisWeek, '📅 Diese Woche')}
                 {renderUpcomingEvents(data.upcomingThisMonth, '📆 Dieser Monat')}
-            </div>
+            </Box>
 
             {/* Filter Section */}
-            <div className="filter-section">
-                <input
-                    type="text"
-                    placeholder="🔍 Suche nach Unit, Kunde..."
-                    className="search-input"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <select 
-                    className="filter-select"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                    <option value="all">Alle Status</option>
-                    <option value="open-offers">Offene Offers</option>
-                    <option value="open-orders">Offene Orders</option>
-                </select>
-                <select 
-                    className="filter-select"
-                    value={serviceFilter}
-                    onChange={(e) => setServiceFilter(e.target.value)}
-                >
-                    <option value="all">Alle Services</option>
-                    {serviceTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                    ))}
-                </select>
-            </div>
+            <Paper sx={{ p: 2, mb: 2 }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <TextField
+                        fullWidth
+                        placeholder="Suche nach Unit, Kunde..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        InputProps={{
+                            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                        }}
+                        size="small"
+                    />
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel>Status</InputLabel>
+                        <Select
+                            value={statusFilter}
+                            label="Status"
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                        >
+                            <MenuItem value="all">Alle Status</MenuItem>
+                            <MenuItem value="open-offers">Offene Offers</MenuItem>
+                            <MenuItem value="open-orders">Offene Orders</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel>Service</InputLabel>
+                        <Select
+                            value={serviceFilter}
+                            label="Service"
+                            onChange={(e) => setServiceFilter(e.target.value)}
+                        >
+                            <MenuItem value="all">Alle Services</MenuItem>
+                            {serviceTypes.map(type => (
+                                <MenuItem key={type} value={type}>{type}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Stack>
+            </Paper>
 
             {/* Pipeline Legend */}
-            <div className="pipeline-legend">
-                <span className="legend-item"><span className="legend-dot dot-yellow"></span> Offen</span>
-                <span className="legend-item"><span className="legend-dot dot-orange"></span> In Arbeit</span>
-                <span className="legend-item"><span className="legend-dot dot-green"></span> Fertig</span>
-                <span className="legend-item"><span className="legend-dot dot-gray"></span> Nicht vorhanden</span>
-            </div>
+            <Paper sx={{ p: 1.5, mb: 2 }}>
+                <Stack direction="row" spacing={3} justifyContent="center" flexWrap="wrap">
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'pipeline.yellow' }} />
+                        <Typography variant="caption">Offen</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'pipeline.orange' }} />
+                        <Typography variant="caption">In Arbeit</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'pipeline.green' }} />
+                        <Typography variant="caption">Fertig</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'pipeline.gray' }} />
+                        <Typography variant="caption">Nicht vorhanden</Typography>
+                    </Stack>
+                </Stack>
+            </Paper>
 
             {/* Customer List */}
-            <div className="customer-list">
+            <Box>
                 {data.customers.map(renderCustomer).filter(Boolean)}
-            </div>
-        </div>
+            </Box>
+        </Container>
     );
 }
 
