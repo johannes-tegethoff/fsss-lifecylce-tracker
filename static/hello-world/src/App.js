@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { invoke } from '@forge/bridge';
+import { invoke, view } from '@forge/bridge';
 import './App.css';
 
 /**
@@ -17,10 +17,22 @@ function App() {
     const [serviceFilter, setServiceFilter] = useState('all');
     const [expandedCustomers, setExpandedCustomers] = useState(new Set());
     const [expandedEpics, setExpandedEpics] = useState(new Set());
+    const [siteUrl, setSiteUrl] = useState('');
+    const [sortBy, setSortBy] = useState('name'); // name, units, completion, overhaulDate
 
-    // Fetch lifecycle data on component mount
+    // Fetch lifecycle data and context on component mount
     useEffect(() => {
         setLoading(true);
+        
+        // Get site URL from Forge context
+        view.getContext().then(context => {
+            if (context.siteUrl) {
+                setSiteUrl(context.siteUrl);
+            }
+        }).catch(err => {
+            console.error('Error getting context:', err);
+        });
+        
         invoke('getLifecycleData', { projectKey: 'FSSS' })
             .then(result => {
                 console.log('Lifecycle data received:', result);
@@ -64,7 +76,7 @@ function App() {
 
     // Open issue in new tab
     const openIssue = (issueKey) => {
-        window.open(`/browse/${issueKey}`, '_blank');
+        window.open(`${siteUrl}/browse/${issueKey}`, '_blank');
     };
 
     // Fuzzy match for search
@@ -162,6 +174,70 @@ function App() {
         return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
     };
 
+    // Calculate summary statistics for a customer
+    const getCustomerSummary = (units) => {
+        const summary = {
+            total: 0,
+            yellow: 0,
+            orange: 0,
+            green: 0,
+            gray: 0,
+            completion: 0
+        };
+
+        let totalProgress = 0;
+        let progressCount = 0;
+
+        units.forEach(unit => {
+            [unit.offer, unit.offerEpic, unit.order, unit.orderEpic].forEach((stage, idx) => {
+                const type = idx % 2 === 0 ? 'issue' : 'epic';
+                const status = getStageStatus(stage, type);
+                
+                summary.total++;
+                summary[status.color]++;
+
+                if (type === 'epic' && stage?.data?.progress !== undefined) {
+                    totalProgress += stage.data.progress;
+                    progressCount++;
+                }
+            });
+        });
+
+        summary.completion = progressCount > 0 ? Math.round(totalProgress / progressCount) : 0;
+        return summary;
+    };
+
+    // Sort customers based on selected criteria
+    const sortCustomers = (customers) => {
+        return [...customers].sort((a, b) => {
+            switch (sortBy) {
+                case 'name':
+                    return a.customer.label.localeCompare(b.customer.label);
+                
+                case 'units':
+                    return b.units.length - a.units.length;
+                
+                case 'completion':
+                    const summaryA = getCustomerSummary(a.units);
+                    const summaryB = getCustomerSummary(b.units);
+                    return summaryB.completion - summaryA.completion;
+                
+                case 'overhaulDate':
+                    const getEarliestDate = (units) => {
+                        const dates = units
+                            .map(u => u.dates?.overhaulStart)
+                            .filter(d => d)
+                            .map(d => new Date(d));
+                        return dates.length > 0 ? Math.min(...dates) : Infinity;
+                    };
+                    return getEarliestDate(a.units) - getEarliestDate(b.units);
+                
+                default:
+                    return 0;
+            }
+        });
+    };
+
     // Render a single pipeline stage
     const renderStage = (stage, type, label, epicType = null) => {
         const stageStatus = getStageStatus(stage, type);
@@ -189,11 +265,15 @@ function App() {
                         {hasData ? (
                             <>
                                 <a 
-                                    href={`/browse/${stage.key}`}
+                                    href={siteUrl ? `${siteUrl}/browse/${stage.key}` : `/browse/${stage.key}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="stage-key-link"
-                                    onClick={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        window.open(siteUrl ? `${siteUrl}/browse/${stage.key}` : `/browse/${stage.key}`, '_blank');
+                                    }}
                                 >
                                     {stage.key}
                                 </a>
@@ -230,12 +310,16 @@ function App() {
                             return (
                                 <div key={task.key} className="epic-task-item">
                                     <span className="task-status-icon">{statusIcon}</span>
-                                    <a 
-                                        href={`/browse/${task.key}`}
+                                                                        <a 
+                                        href={siteUrl ? `${siteUrl}/browse/${task.key}` : `/browse/${task.key}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="task-key-link"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            window.open(siteUrl ? `${siteUrl}/browse/${task.key}` : `/browse/${task.key}`, '_blank');
+                                        }}
                                     >
                                         {task.key}
                                     </a>
@@ -297,6 +381,8 @@ function App() {
         
         if (filteredUnits.length === 0) return null;
         
+        const summary = getCustomerSummary(filteredUnits);
+        
         return (
             <div key={customer.id} className="customer-section">
                 <div 
@@ -305,6 +391,42 @@ function App() {
                 >
                     <span className="customer-toggle">{isExpanded ? '▼' : '▶'}</span>
                     <h3 className="customer-name">🏢 {customer.label}</h3>
+                    
+                    {/* Visual Summary Bar */}
+                    <div className="customer-summary">
+                        <div className="summary-bar">
+                            {summary.green > 0 && (
+                                <div 
+                                    className="bar-segment bar-green" 
+                                    style={{ width: `${(summary.green / summary.total) * 100}%` }}
+                                    title={`${summary.green} done`}
+                                />
+                            )}
+                            {summary.orange > 0 && (
+                                <div 
+                                    className="bar-segment bar-orange" 
+                                    style={{ width: `${(summary.orange / summary.total) * 100}%` }}
+                                    title={`${summary.orange} in progress`}
+                                />
+                            )}
+                            {summary.yellow > 0 && (
+                                <div 
+                                    className="bar-segment bar-yellow" 
+                                    style={{ width: `${(summary.yellow / summary.total) * 100}%` }}
+                                    title={`${summary.yellow} open`}
+                                />
+                            )}
+                            {summary.gray > 0 && (
+                                <div 
+                                    className="bar-segment bar-gray" 
+                                    style={{ width: `${(summary.gray / summary.total) * 100}%` }}
+                                    title={`${summary.gray} N/A`}
+                                />
+                            )}
+                        </div>
+                        <span className="summary-completion">{summary.completion}%</span>
+                    </div>
+                    
                     <span className="customer-count">({filteredUnits.length} Units)</span>
                 </div>
                 
@@ -411,6 +533,16 @@ function App() {
                         <option key={type} value={type}>{type}</option>
                     ))}
                 </select>
+                <select 
+                    className="filter-select sort-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                >
+                    <option value="name">Sortieren: Name</option>
+                    <option value="units">Sortieren: # Units</option>
+                    <option value="completion">Sortieren: Fortschritt</option>
+                    <option value="overhaulDate">Sortieren: Overhaul Datum</option>
+                </select>
             </div>
 
             {/* Pipeline Legend */}
@@ -423,7 +555,7 @@ function App() {
 
             {/* Customer List */}
             <div className="customer-list">
-                {data.customers.map(renderCustomer).filter(Boolean)}
+                {sortCustomers(data.customers).map(renderCustomer).filter(Boolean)}
             </div>
         </div>
     );

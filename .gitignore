@@ -63,6 +63,11 @@ static/hello-world/build/
 test-*.mjs
 test-*.js
 
+# Migration scripts (one-time use)
+migrate-*.mjs
+MIGRATION-PLAN.md
+link-analysis-report.txt
+
 # Backup files
 *.old
 *.backup

@@ -159,6 +159,11 @@
     border-color: #0052CC;
 }
 
+.sort-select {
+    background: #F4F5F7;
+    font-weight: 500;
+}
+
 /* === Pipeline Legend === */
 .pipeline-legend {
     display: flex;
@@ -240,6 +245,52 @@
     border-radius: 10px;
 }
 
+/* Customer Summary Bar */
+.customer-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    margin-right: 16px;
+}
+
+.summary-bar {
+    display: flex;
+    width: 120px;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #EBECF0;
+}
+
+.bar-segment {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.bar-green {
+    background: linear-gradient(135deg, #36B37E 0%, #00875A 100%);
+}
+
+.bar-orange {
+    background: linear-gradient(135deg, #FF8B00 0%, #FF5630 100%);
+}
+
+.bar-yellow {
+    background: linear-gradient(135deg, #FFAB00 0%, #FF991F 100%);
+}
+
+.bar-gray {
+    background: #C1C7D0;
+}
+
+.summary-completion {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0052CC;
+    min-width: 35px;
+}
+
 .customer-units {
     padding: 12px;
     display: flex;
@@ -316,8 +367,7 @@
 
 .pipeline-stage-wrapper {
     flex: 1;
-    min-width: 120px;
-    max-width: 200px;
+    min-width: 180px;
 }
 
 .pipeline-stage {
@@ -488,9 +538,9 @@
 .task-summary {
     color: #172B4D;
     flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow: visible;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .epic-tasks-more {

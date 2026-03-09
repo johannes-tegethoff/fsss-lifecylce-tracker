@@ -427,6 +427,7 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
             
             const linkedType = linked.fields?.issuetype?.name;
             const linkedSummary = linked.fields?.summary || '';
+            const linkTypeName = link.type?.name || '';
             
             if (linkedType === 'Epic') {
                 // Determine if it's an Offer-Epic or Order-Epic based on summary
@@ -439,10 +440,13 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
                     data: epicCache[linked.key] || null
                 };
             } else if (linkedType === 'Offer' || linkedType === 'Order') {
+                // Found a related Offer/Order
+                // Accept any link type (Relates, is created by, etc.)
                 linkedOfferOrOrder = {
                     key: linked.key,
                     type: linkedType,
-                    summary: linked.fields?.summary
+                    summary: linked.fields?.summary,
+                    linkType: linkTypeName
                 };
             }
         }
@@ -536,6 +540,14 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
             // If this order has a linked epic, it's the Order-Epic
             if (issue.linkedEpic) {
                 unit.orderEpic = issue.linkedEpic;
+            }
+            // If this order has a linked Offer, add it to the unit
+            if (issue.linkedOfferOrOrder && issue.linkedOfferOrOrder.type === 'Offer') {
+                unit.offer = {
+                    key: issue.linkedOfferOrOrder.key,
+                    status: 'Unknown', // We don't have the status from the link
+                    summary: issue.linkedOfferOrOrder.summary
+                };
             }
         }
     }
