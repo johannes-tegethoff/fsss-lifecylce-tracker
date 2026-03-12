@@ -43,14 +43,28 @@ If you don't think there is a suitable template, check the list again, and choos
 
 After creating the app ALWAYS review the contents of the app directory before editing or creating files. DO NOT assume particular files were automatically created before you have reviewed the directory content.
 
-# UI Development
-
-The front-end of you app is built on Atlassian UI Kit, which has some similarities to React, but does not support all React features.
-You MUST NOT use common React components such as <div>, <strong>, etc. This will cause the app not to render.
-Instead, you MUST ONLY use components exported by UI Kit, which are: Badge, BarChart, Box, Button, ButtonGroup, Calendar, Checkbox, Code, CodeBlock, DatePicker, EmptyState, ErrorMessage, Form, FormFooter, FormHeader, FormSection, Heading, HelperMessage, HorizontalBarChart, HorizontalStackBarChart, Icon, Inline, Label, LineChart, LinkButton, List, ListItem, LoadingButton, Lozenge, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, ModalTransition, PieChart, ProgressBar, ProgressTracker, Radio, RadioGroup, Range, Select, SectionMessage, SectionMessageAction, SingleValueChart, Spinner, Stack, StackBarChart, Tab, TabList, TabPanel, Tabs, Tag, TagGroup, TextArea, Textfield, TimePicker, Toggle, Tooltip, Text, ValidMessage, RequiredAsterisk, Image, Link, UserPicker, User, UserGroup, Em, Strike, Strong, Frame, DynamicTable, InlineEdit, Popup, AdfRenderer
-If your resolver no longer contains any definitions, you may delete it and remove it from the manifest.
-
-Note that THERE IS NOT UI KIT COMPONENT NAMED "Table" - always use "DynamicTable" instead! Using "Table" will cause the app not to render.
+#UI Development (Custom UI Edition)
+The front-end of this app is built using Atlassian Custom UI. Unlike UI Kit, Custom UI runs as a standard Single Page Application (SPA) within an Iframe. This gives us full control over the DOM and CSS.
+##Core Principles
+Standard Web Technologies: You can and SHOULD use standard HTML tags like <div>, <span>, <strong>, etc.
+Framework: The app typically uses React, but it is a full React environment, not the limited UI Kit version.
+Styling: You can use CSS-in-JS (e.g., Styled Components), Tailwind CSS, or standard CSS files.
+Design Consistency: To maintain the Atlassian Look & Feel, you SHOULD use components from the Atlassian Design System (AtlasKit).
+##Communication with the Backend (The Bridge)
+Since the app runs in an isolated Iframe, it cannot access Jira/Confluence APIs or the Forge Storage directly.
+Resolvers: All backend logic must be defined in a resolver.
+Invoke: Use the @forge/bridge library to call backend functions.
+Example: const data = await invoke('get-data-function', { id: 123 });
+Product Context: Use view.getContext() from @forge/bridge to get information about the current issue, project, or user.
+##Constraints & Security (CSP)
+Content Security Policy (CSP): You cannot load external scripts, styles, or images unless they are explicitly whitelisted in the manifest.yml under permissions.
+Data Fetching: Do not use standard fetch() for Atlassian APIs. Always use the Backend Resolver to perform requestJira or requestConfluence calls.
+Asynchronous Nature: Every interaction with the backend is asynchronous. Always implement proper loading states (e.g., using @atlaskit/spinner).
+##Component Guidelines
+While you are free to use any HTML, for a native experience, prefer these AtlasKit packages:
+Use @atlaskit/dynamic-table for data grids.
+Use @atlaskit/button for interactive elements.
+Use @atlaskit/tokens for colors and spacing to support Dark Mode automatically.
 
 # Storing Data
 

@@ -350,6 +350,15 @@ function App() {
                 <div className="unit-header">
                     <span className="unit-name">📦 {unit.unitName}</span>
                     <span className="unit-service">{unit.serviceType}</span>
+                    {/* Show warning badge if unit has legacy links that need migration */}
+                    {unit.hasLegacyLinks && (
+                        <span 
+                            className="unit-legacy-badge" 
+                            title="Dieser Service hat Links die noch migriert werden müssen (Relates → spezifischer Link-Typ)"
+                        >
+                            ⚠️ Legacy Links
+                        </span>
+                    )}
                     <div className="unit-dates">
                         <span title="Stop of Unit">Stop: {formatDateShort(unit.dates.stopOfUnit)}</span>
                         <span className="date-separator">|</span>
@@ -471,6 +480,104 @@ function App() {
         );
     };
 
+    // Render migration status panel
+    // Shows progress of migrating "Relates" links to specific link types
+    const renderMigrationStatus = () => {
+        const stats = data?.migrationStats;
+        if (!stats || stats.totalLinks === 0) return null;
+        
+        // Don't show if migration is complete
+        if (stats.migrationProgress === 100) return null;
+        
+        const linkTypeLabels = {
+            'Service Work Package (Offer->Epic)': 'Offer → Epic',
+            'Contract Delivery (Order->Epic)': 'Order → Epic',
+            'Offer-Order-Relationship': 'Offer → Order'
+        };
+        
+        return (
+            <div className="migration-section">
+                <h4>🔗 Link-Migration</h4>
+                <div className="migration-content">
+                    {/* Progress Bar */}
+                    <div className="migration-progress">
+                        <div className="migration-progress-bar">
+                            <div 
+                                className="migration-progress-fill" 
+                                style={{ width: `${stats.migrationProgress}%` }}
+                            />
+                        </div>
+                        <span className="migration-progress-text">
+                            {stats.specificLinks}/{stats.totalLinks} Links migriert ({stats.migrationProgress}%)
+                        </span>
+                    </div>
+                    
+                    {/* Breakdown by Type */}
+                    <div className="migration-breakdown">
+                        <div className="migration-type">
+                            <span className="migration-type-label">Offer → Epic:</span>
+                            <span className={`migration-type-count ${stats.byType.offerEpic.legacy > 0 ? 'has-legacy' : 'complete'}`}>
+                                {stats.byType.offerEpic.specific} ✓ / {stats.byType.offerEpic.legacy} ⏳
+                            </span>
+                        </div>
+                        <div className="migration-type">
+                            <span className="migration-type-label">Order → Epic:</span>
+                            <span className={`migration-type-count ${stats.byType.orderEpic.legacy > 0 ? 'has-legacy' : 'complete'}`}>
+                                {stats.byType.orderEpic.specific} ✓ / {stats.byType.orderEpic.legacy} ⏳
+                            </span>
+                        </div>
+                        <div className="migration-type">
+                            <span className="migration-type-label">Offer → Order:</span>
+                            <span className={`migration-type-count ${stats.byType.offerOrder.legacy > 0 ? 'has-legacy' : 'complete'}`}>
+                                {stats.byType.offerOrder.specific} ✓ / {stats.byType.offerOrder.legacy} ⏳
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {/* Show first few links to migrate */}
+                    {stats.linksToMigrate && stats.linksToMigrate.length > 0 && (
+                        <details className="migration-details">
+                            <summary className="migration-details-summary">
+                                📋 {stats.linksToMigrate.length} Links zu migrieren
+                            </summary>
+                            <div className="migration-links-list">
+                                {stats.linksToMigrate.slice(0, 10).map((link, idx) => (
+                                    <div key={idx} className="migration-link-item">
+                                        <a 
+                                            href={`${siteUrl}/browse/${link.from}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="migration-link-key"
+                                        >
+                                            {link.from}
+                                        </a>
+                                        <span className="migration-link-arrow">→</span>
+                                        <a 
+                                            href={`${siteUrl}/browse/${link.to}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="migration-link-key"
+                                        >
+                                            {link.to}
+                                        </a>
+                                        <span className="migration-link-type" title={`Ändern zu: ${link.suggestedType}`}>
+                                            {linkTypeLabels[link.suggestedType] || link.suggestedType}
+                                        </span>
+                                    </div>
+                                ))}
+                                {stats.linksToMigrate.length > 10 && (
+                                    <div className="migration-links-more">
+                                        +{stats.linksToMigrate.length - 10} weitere...
+                                    </div>
+                                )}
+                            </div>
+                        </details>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     // Loading state
     if (loading) {
         return (
@@ -499,10 +606,11 @@ function App() {
 
     return (
         <div className="app">
-            {/* Upcoming Events */}
+            {/* Upcoming Events & Migration Status */}
             <div className="upcoming-container">
                 {renderUpcomingEvents(data.upcomingThisWeek, '📅 Diese Woche')}
                 {renderUpcomingEvents(data.upcomingThisMonth, '📆 Dieser Monat')}
+                {renderMigrationStatus()}
             </div>
 
             {/* Filter Section */}

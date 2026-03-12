@@ -7,7 +7,12 @@
   "private": true,
   "homepage": ".",
   "dependencies": {
+    "@atlaskit/button": "^16.0.0",
     "@atlaskit/css-reset": "^6.6.2",
+    "@atlaskit/icon": "^21.0.0",
+    "@atlaskit/lozenge": "^11.0.0",
+    "@atlaskit/spinner": "^15.0.0",
+    "@atlaskit/textfield": "^5.0.0",
     "@forge/bridge": "5.14.0",
     "react": "^16",
     "react-dom": "^16"

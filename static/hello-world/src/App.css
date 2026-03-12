@@ -120,6 +120,173 @@
     padding: 4px;
 }
 
+/* === Migration Status Section === */
+.migration-section {
+    background: linear-gradient(135deg, #F4F5F7 0%, #EBECF0 100%);
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #FF8B00;
+}
+
+.migration-section h4 {
+    font-size: 14px;
+    color: #6B778C;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.migration-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Migration Progress Bar */
+.migration-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.migration-progress-bar {
+    height: 10px;
+    background: #DFE1E6;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.migration-progress-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #36B37E 0%, #00875A 100%);
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+
+.migration-progress-text {
+    font-size: 12px;
+    color: #6B778C;
+    font-weight: 500;
+}
+
+/* Migration Breakdown */
+.migration-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.migration-type {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: white;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.migration-type-label {
+    color: #6B778C;
+}
+
+.migration-type-count {
+    font-weight: 600;
+}
+
+.migration-type-count.complete {
+    color: #36B37E;
+}
+
+.migration-type-count.has-legacy {
+    color: #FF8B00;
+}
+
+/* Migration Details (expandable) */
+.migration-details {
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.migration-details-summary {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #0052CC;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.migration-details-summary::-webkit-details-marker {
+    display: none;
+}
+
+.migration-details-summary:hover {
+    background: #F4F5F7;
+}
+
+.migration-details[open] .migration-details-summary {
+    border-bottom: 1px solid #DFE1E6;
+}
+
+.migration-links-list {
+    padding: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.migration-link-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+.migration-link-item:hover {
+    background: #F4F5F7;
+}
+
+.migration-link-key {
+    color: #0052CC;
+    text-decoration: none;
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.migration-link-key:hover {
+    text-decoration: underline;
+}
+
+.migration-link-arrow {
+    color: #B3BAC5;
+}
+
+.migration-link-type {
+    margin-left: auto;
+    background: #DEEBFF;
+    color: #0052CC;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.migration-links-more {
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    color: #6B778C;
+    border-top: 1px solid #DFE1E6;
+    margin-top: 4px;
+}
+
 
 
 /* === Filter Section === */
@@ -327,6 +494,27 @@
     border-radius: 4px;
     font-size: 12px;
     font-weight: 500;
+}
+
+/* Legacy Link Warning Badge */
+.unit-legacy-badge {
+    background: linear-gradient(135deg, #FFAB00 0%, #FF991F 100%);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: help;
+    animation: pulse-warning 2s infinite;
+}
+
+@keyframes pulse-warning {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
 }
 
 .unit-dates {

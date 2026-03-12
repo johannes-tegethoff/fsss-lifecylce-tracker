@@ -21,6 +21,34 @@ const KNOWN_SERVICE_TYPES = [
 ];
 
 /**
+ * Link Type Names - These are the specific link types configured in Jira
+ * for the Service Lifecycle. Using these instead of generic "Relates" links
+ * provides more reliable and semantic linking.
+ * 
+ * IMPORTANT: The Jira API is counter-intuitive:
+ * - inwardIssue = Issue that shows the OUTWARD text
+ * - outwardIssue = Issue that shows the INWARD text
+ * 
+ * Link Type Definitions:
+ * - Offer-Order-Relationship: Offer (shows "has order") → Order (shows "is order for")
+ * - Service Work Package: Offer (shows "has work package") → Epic (shows "is work package for")
+ * - Contract Delivery: Order (shows "is delivered via") → Epic (shows "delivers contract")
+ */
+const LINK_TYPES = {
+    // Offer → Order: Links an Offer to its resulting Order
+    OFFER_ORDER: 'Offer-Order-Relationship',
+    
+    // Offer → Epic: Links an Offer to its Work Package (Epic)
+    OFFER_EPIC: 'Service Work Package (Offer->Epic)',
+    
+    // Order → Epic: Links an Order to its Delivery Epic
+    ORDER_EPIC: 'Contract Delivery (Order->Epic)',
+    
+    // Legacy link type - used as fallback during migration
+    RELATES: 'Relates'
+};
+
+/**
  * Custom Field IDs for date fields
  */
 const DATE_FIELDS = {
@@ -416,40 +444,141 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
             startOfCommissioning: f?.[DATE_FIELDS.startOfCommissioning] || null
         };
         
-        // Find linked Epic (check if summary contains "Offer:" or "Order:")
+        // Process issue links using the new semantic link types
+        // Priority: Specific link types > "Relates" fallback > Summary-based detection
         const links = f?.issuelinks || [];
-        let linkedEpic = null;
-        let linkedOfferOrOrder = null;
+        
+        // Structured link storage
+        let linkedOfferEpic = null;      // Epic linked via "Service Work Package"
+        let linkedOrderEpic = null;      // Epic linked via "Contract Delivery"
+        let linkedOrder = null;          // Order linked via "Offer-Order-Relationship"
+        let linkedOffer = null;          // Offer linked via "Offer-Order-Relationship"
+        let legacyLinkedEpic = null;     // Epic linked via "Relates" (fallback)
+        let legacyLinkedOfferOrder = null; // Offer/Order linked via "Relates" (fallback)
+        
+        // Track migration status for reporting
+        const migrationWarnings = [];
         
         for (const link of links) {
-            const linked = link.outwardIssue || link.inwardIssue;
-            if (!linked) continue;
-            
-            const linkedType = linked.fields?.issuetype?.name;
-            const linkedSummary = linked.fields?.summary || '';
             const linkTypeName = link.type?.name || '';
             
-            if (linkedType === 'Epic') {
-                // Determine if it's an Offer-Epic or Order-Epic based on summary
-                const isOfferEpic = linkedSummary.toLowerCase().startsWith('offer:');
-                const isOrderEpic = linkedSummary.toLowerCase().startsWith('order:');
-                linkedEpic = {
-                    key: linked.key,
-                    summary: linkedSummary,
-                    type: isOfferEpic ? 'offer-epic' : isOrderEpic ? 'order-epic' : 'unknown',
-                    data: epicCache[linked.key] || null
-                };
-            } else if (linkedType === 'Offer' || linkedType === 'Order') {
-                // Found a related Offer/Order
-                // Accept any link type (Relates, is created by, etc.)
-                linkedOfferOrOrder = {
-                    key: linked.key,
-                    type: linkedType,
-                    summary: linked.fields?.summary,
-                    linkType: linkTypeName
-                };
+            // In Jira's link API:
+            // - outwardIssue: the issue this link points TO (shows inward text on that issue)
+            // - inwardIssue: the issue this link points FROM (shows outward text on that issue)
+            // When viewing from the current issue's perspective:
+            // - If outwardIssue is set: current issue shows outward text, linked shows inward
+            // - If inwardIssue is set: current issue shows inward text, linked shows outward
+            const outward = link.outwardIssue;
+            const inward = link.inwardIssue;
+            const linked = outward || inward;
+            
+            if (!linked) continue;
+            
+            const linkedIssueType = linked.fields?.issuetype?.name;
+            const linkedSummary = linked.fields?.summary || '';
+            const linkedKey = linked.key;
+            
+            // Process based on specific link type
+            switch (linkTypeName) {
+                
+                case LINK_TYPES.OFFER_EPIC:
+                    // Service Work Package: Offer → Epic
+                    // Offer shows "has work package", Epic shows "is work package for"
+                    if (linkedIssueType === 'Epic') {
+                        linkedOfferEpic = {
+                            key: linkedKey,
+                            summary: linkedSummary,
+                            type: 'offer-epic',
+                            linkType: linkTypeName,
+                            data: epicCache[linkedKey] || null
+                        };
+                        console.log(`[processLinks] ${issue.key}: Found Offer-Epic link → ${linkedKey}`);
+                    }
+                    break;
+                    
+                case LINK_TYPES.ORDER_EPIC:
+                    // Contract Delivery: Order → Epic
+                    // Order shows "is delivered via", Epic shows "delivers contract"
+                    if (linkedIssueType === 'Epic') {
+                        linkedOrderEpic = {
+                            key: linkedKey,
+                            summary: linkedSummary,
+                            type: 'order-epic',
+                            linkType: linkTypeName,
+                            data: epicCache[linkedKey] || null
+                        };
+                        console.log(`[processLinks] ${issue.key}: Found Order-Epic link → ${linkedKey}`);
+                    }
+                    break;
+                    
+                case LINK_TYPES.OFFER_ORDER:
+                    // Offer-Order-Relationship: Offer → Order
+                    // Offer shows "has order", Order shows "is order for"
+                    if (linkedIssueType === 'Order') {
+                        linkedOrder = {
+                            key: linkedKey,
+                            summary: linkedSummary,
+                            status: linked.fields?.status?.name,
+                            linkType: linkTypeName
+                        };
+                        console.log(`[processLinks] ${issue.key}: Found linked Order → ${linkedKey}`);
+                    } else if (linkedIssueType === 'Offer') {
+                        linkedOffer = {
+                            key: linkedKey,
+                            summary: linkedSummary,
+                            status: linked.fields?.status?.name,
+                            linkType: linkTypeName
+                        };
+                        console.log(`[processLinks] ${issue.key}: Found linked Offer → ${linkedKey}`);
+                    }
+                    break;
+                    
+                case LINK_TYPES.RELATES:
+                default:
+                    // Fallback: Handle "Relates" links and other generic link types
+                    // This supports the migration period where not all links are converted yet
+                    if (linkedIssueType === 'Epic') {
+                        // Try to determine Epic type from summary (legacy behavior)
+                        const isOfferEpic = linkedSummary.toLowerCase().startsWith('offer:');
+                        const isOrderEpic = linkedSummary.toLowerCase().startsWith('order:');
+                        
+                        legacyLinkedEpic = {
+                            key: linkedKey,
+                            summary: linkedSummary,
+                            type: isOfferEpic ? 'offer-epic' : isOrderEpic ? 'order-epic' : 'unknown',
+                            linkType: linkTypeName || 'unknown',
+                            data: epicCache[linkedKey] || null,
+                            needsMigration: true
+                        };
+                        
+                        // Log migration warning
+                        migrationWarnings.push({
+                            from: issue.key,
+                            to: linkedKey,
+                            currentType: linkTypeName || 'unknown',
+                            suggestedType: isOfferEpic ? LINK_TYPES.OFFER_EPIC : 
+                                          isOrderEpic ? LINK_TYPES.ORDER_EPIC : 'unknown'
+                        });
+                        console.warn(`[MIGRATION] ${issue.key} → ${linkedKey}: Using "${linkTypeName}" link, should be migrated to specific type`);
+                        
+                    } else if (linkedIssueType === 'Offer' || linkedIssueType === 'Order') {
+                        legacyLinkedOfferOrder = {
+                            key: linkedKey,
+                            type: linkedIssueType,
+                            summary: linkedSummary,
+                            status: linked.fields?.status?.name,
+                            linkType: linkTypeName,
+                            needsMigration: true
+                        };
+                        console.warn(`[MIGRATION] ${issue.key} → ${linkedKey}: Using "${linkTypeName}" link for Offer/Order relationship`);
+                    }
+                    break;
             }
         }
+        
+        // Merge results: prefer specific link types over legacy fallbacks
+        const linkedEpic = linkedOfferEpic || linkedOrderEpic || legacyLinkedEpic;
+        const linkedOfferOrOrder = linkedOffer || linkedOrder || legacyLinkedOfferOrder;
         
         issueMap[issue.key] = {
             key: issue.key,
@@ -458,8 +587,17 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
             status: f?.status?.name,
             parsed,
             dates,
-            linkedEpic,
-            linkedOfferOrOrder
+            // New structured link data
+            linkedOfferEpic,      // Epic via "Service Work Package" link
+            linkedOrderEpic,      // Epic via "Contract Delivery" link  
+            linkedOrder,          // Order via "Offer-Order-Relationship" link
+            linkedOffer,          // Offer via "Offer-Order-Relationship" link
+            // Legacy/fallback (for backward compatibility during migration)
+            linkedEpic,           // Any Epic (merged: specific || legacy)
+            linkedOfferOrOrder,   // Any Offer/Order (merged: specific || legacy)
+            // Migration tracking
+            migrationWarnings,
+            hasLegacyLinks: legacyLinkedEpic !== null || legacyLinkedOfferOrder !== null
         };
     }
     
@@ -520,35 +658,69 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
         if (issue.dates.overhaulEnd) unit.dates.overhaulEnd = issue.dates.overhaulEnd;
         if (issue.dates.startOfCommissioning) unit.dates.startOfCommissioning = issue.dates.startOfCommissioning;
         
-        // Place issue in correct pipeline slot
+        // Place issue in correct pipeline slot using the new link-type-aware logic
         if (issue.type === 'Offer') {
             unit.offer = {
                 key: issue.key,
                 status: issue.status,
                 summary: issue.summary
             };
-            // If this offer has a linked epic, it's the Offer-Epic
-            if (issue.linkedEpic) {
+            
+            // Offer-Epic: Prefer specific "Service Work Package" link over fallback
+            if (issue.linkedOfferEpic) {
+                unit.offerEpic = issue.linkedOfferEpic;
+            } else if (issue.linkedEpic && issue.linkedEpic.type === 'offer-epic') {
+                // Fallback to legacy detection
                 unit.offerEpic = issue.linkedEpic;
             }
+            
+            // If Offer has a linked Order via "Offer-Order-Relationship"
+            if (issue.linkedOrder) {
+                unit.order = {
+                    key: issue.linkedOrder.key,
+                    status: issue.linkedOrder.status || 'Unknown',
+                    summary: issue.linkedOrder.summary,
+                    linkedVia: issue.linkedOrder.linkType
+                };
+            }
+            
         } else if (issue.type === 'Order') {
             unit.order = {
                 key: issue.key,
                 status: issue.status,
                 summary: issue.summary
             };
-            // If this order has a linked epic, it's the Order-Epic
-            if (issue.linkedEpic) {
+            
+            // Order-Epic: Prefer specific "Contract Delivery" link over fallback
+            if (issue.linkedOrderEpic) {
+                unit.orderEpic = issue.linkedOrderEpic;
+            } else if (issue.linkedEpic && issue.linkedEpic.type === 'order-epic') {
+                // Fallback to legacy detection
                 unit.orderEpic = issue.linkedEpic;
             }
-            // If this order has a linked Offer, add it to the unit
-            if (issue.linkedOfferOrOrder && issue.linkedOfferOrOrder.type === 'Offer') {
+            
+            // If Order has a linked Offer via "Offer-Order-Relationship"
+            if (issue.linkedOffer) {
+                unit.offer = {
+                    key: issue.linkedOffer.key,
+                    status: issue.linkedOffer.status || 'Unknown',
+                    summary: issue.linkedOffer.summary,
+                    linkedVia: issue.linkedOffer.linkType
+                };
+            } else if (issue.linkedOfferOrOrder && issue.linkedOfferOrOrder.type === 'Offer') {
+                // Fallback: Legacy link to Offer
                 unit.offer = {
                     key: issue.linkedOfferOrOrder.key,
-                    status: 'Unknown', // We don't have the status from the link
-                    summary: issue.linkedOfferOrOrder.summary
+                    status: issue.linkedOfferOrOrder.status || 'Unknown',
+                    summary: issue.linkedOfferOrOrder.summary,
+                    linkedVia: issue.linkedOfferOrOrder.linkType || 'legacy'
                 };
             }
+        }
+        
+        // Track if this unit has any legacy links that need migration
+        if (issue.hasLegacyLinks) {
+            unit.hasLegacyLinks = true;
         }
     }
     
@@ -606,7 +778,83 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
     console.log(`[buildCustomerLifecycleData] Complete: ${customers.length} customers, ${noCustomer.length} without customer`);
     console.log(`[buildCustomerLifecycleData] Upcoming this week: ${upcomingThisWeek.length}, this month: ${upcomingThisMonth.length}`);
     
-    return { customers, noCustomer, upcomingThisWeek, upcomingThisMonth };
+    // Collect migration statistics
+    // This helps track the progress of migrating "Relates" links to specific link types
+    const migrationStats = {
+        totalLinks: 0,
+        specificLinks: 0,      // Links using new specific types
+        legacyLinks: 0,        // Links still using "Relates" or other generic types
+        byType: {
+            offerOrder: { specific: 0, legacy: 0 },
+            offerEpic: { specific: 0, legacy: 0 },
+            orderEpic: { specific: 0, legacy: 0 }
+        },
+        linksToMigrate: []     // Detailed list of links that need migration
+    };
+    
+    // Analyze all issues for migration status
+    for (const [key, issue] of Object.entries(issueMap)) {
+        // Count Offer-Epic links
+        if (issue.linkedOfferEpic) {
+            migrationStats.specificLinks++;
+            migrationStats.byType.offerEpic.specific++;
+            migrationStats.totalLinks++;
+        } else if (issue.linkedEpic && issue.linkedEpic.type === 'offer-epic' && issue.linkedEpic.needsMigration) {
+            migrationStats.legacyLinks++;
+            migrationStats.byType.offerEpic.legacy++;
+            migrationStats.totalLinks++;
+            migrationStats.linksToMigrate.push({
+                from: issue.key,
+                to: issue.linkedEpic.key,
+                currentType: issue.linkedEpic.linkType,
+                suggestedType: LINK_TYPES.OFFER_EPIC
+            });
+        }
+        
+        // Count Order-Epic links
+        if (issue.linkedOrderEpic) {
+            migrationStats.specificLinks++;
+            migrationStats.byType.orderEpic.specific++;
+            migrationStats.totalLinks++;
+        } else if (issue.linkedEpic && issue.linkedEpic.type === 'order-epic' && issue.linkedEpic.needsMigration) {
+            migrationStats.legacyLinks++;
+            migrationStats.byType.orderEpic.legacy++;
+            migrationStats.totalLinks++;
+            migrationStats.linksToMigrate.push({
+                from: issue.key,
+                to: issue.linkedEpic.key,
+                currentType: issue.linkedEpic.linkType,
+                suggestedType: LINK_TYPES.ORDER_EPIC
+            });
+        }
+        
+        // Count Offer-Order links
+        if (issue.linkedOrder || issue.linkedOffer) {
+            migrationStats.specificLinks++;
+            migrationStats.byType.offerOrder.specific++;
+            migrationStats.totalLinks++;
+        } else if (issue.linkedOfferOrOrder && issue.linkedOfferOrOrder.needsMigration) {
+            migrationStats.legacyLinks++;
+            migrationStats.byType.offerOrder.legacy++;
+            migrationStats.totalLinks++;
+            migrationStats.linksToMigrate.push({
+                from: issue.key,
+                to: issue.linkedOfferOrOrder.key,
+                currentType: issue.linkedOfferOrOrder.linkType,
+                suggestedType: LINK_TYPES.OFFER_ORDER
+            });
+        }
+    }
+    
+    // Calculate migration percentage
+    migrationStats.migrationProgress = migrationStats.totalLinks > 0 
+        ? Math.round((migrationStats.specificLinks / migrationStats.totalLinks) * 100) 
+        : 100;
+    
+    console.log(`[buildCustomerLifecycleData] Migration Status: ${migrationStats.specificLinks}/${migrationStats.totalLinks} links migrated (${migrationStats.migrationProgress}%)`);
+    console.log(`[buildCustomerLifecycleData] Links to migrate: ${migrationStats.linksToMigrate.length}`);
+    
+    return { customers, noCustomer, upcomingThisWeek, upcomingThisMonth, migrationStats };
 }
 
 /**
@@ -672,7 +920,9 @@ resolver.define('getLifecycleData', async (req) => {
             customers: data.customers,
             noCustomer: data.noCustomer,
             upcomingThisWeek: data.upcomingThisWeek,
-            upcomingThisMonth: data.upcomingThisMonth
+            upcomingThisMonth: data.upcomingThisMonth,
+            // Migration tracking data
+            migrationStats: data.migrationStats
         };
     } catch (error) {
         console.error('[getLifecycleData] Error:', error);
