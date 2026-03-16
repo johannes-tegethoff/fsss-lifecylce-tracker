@@ -486,6 +486,117 @@
 }
 
 /* ========================================
+   FIELD MAPPINGS
+   ======================================== */
+
+.field-mappings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.field-mappings-grid h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #172B4D;
+    margin: 16px 0 8px 0;
+    padding-top: 16px;
+    border-top: 1px solid #EBECF0;
+}
+
+.field-mappings-grid h3:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.field-select {
+    padding: 10px 14px;
+    border: 2px solid #DFE1E6;
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 280px;
+    max-width: 400px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.field-select:focus {
+    outline: none;
+    border-color: #0052CC;
+}
+
+.field-select:hover {
+    border-color: #B3BAC5;
+}
+
+.field-id-display {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 4px 10px;
+    background: #F4F5F7;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: monospace;
+    color: #6B778C;
+}
+
+.manual-field-input {
+    margin-top: 20px;
+    padding: 16px;
+    background: #FFFAE6;
+    border-radius: 8px;
+    border: 1px solid #FFE380;
+}
+
+.manual-hint {
+    margin: 0;
+    font-size: 13px;
+    color: #172B4D;
+    line-height: 1.5;
+}
+
+.manual-hint strong {
+    color: #FF8B00;
+}
+
+.loading-inline {
+    font-style: italic;
+    color: #6B778C;
+    font-size: 13px;
+}
+
+/* ========================================
+   CACHE SETTINGS
+   ======================================== */
+
+.cache-clear-btn {
+    padding: 10px 18px;
+    background: #FFEBE6;
+    color: #BF2600;
+    border: 1px solid #FFBDAD;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cache-clear-btn:hover:not(:disabled) {
+    background: #FFBDAD;
+    border-color: #FF8F73;
+}
+
+.cache-clear-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ========================================
    INFO SECTION
    ======================================== */
 

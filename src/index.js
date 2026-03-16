@@ -13,7 +13,31 @@ import { storage } from '@forge/kvs';
 const STORAGE_KEYS = {
     SETTINGS: 'app-settings',
     ALLOWED_GROUPS: 'allowed-groups',
-    PROJECT_KEY: 'project-key'
+    PROJECT_KEY: 'project-key',
+    LIFECYCLE_CACHE: 'lifecycle-cache'  // Cached lifecycle data for performance
+};
+
+/**
+ * Cache configuration
+ * TTL (Time To Live) in milliseconds for cached data
+ */
+const CACHE_CONFIG = {
+    LIFECYCLE_TTL: 5 * 60 * 1000,  // 5 minutes in milliseconds
+    ENABLED: true                    // Can be disabled for debugging
+};
+
+/**
+ * Default Custom Field IDs - these are the hardcoded defaults for the FSSS project.
+ * These can be overridden via the Admin Settings page for other Jira instances.
+ */
+const DEFAULT_FIELD_MAPPINGS = {
+    // Date fields for timeline tracking
+    stopOfUnit: 'customfield_10147',
+    overhaulStart: 'customfield_10148',
+    overhaulEnd: 'customfield_10149',
+    startOfCommissioning: 'customfield_10150',
+    // Team field for filtering
+    team: 'customfield_10001'
 };
 
 /**
@@ -21,9 +45,15 @@ const STORAGE_KEYS = {
  * These are fallback values for first-time app usage.
  */
 const DEFAULT_SETTINGS = {
+    // Access Control
     allowedGroups: [],
     restrictAccess: false,
-    projectKey: 'FSSS'
+    // Project Configuration
+    projectKey: 'FSSS',
+    // Custom Field Mappings (can be configured per Jira instance)
+    fieldMappings: DEFAULT_FIELD_MAPPINGS,
+    // Cache settings
+    cacheEnabled: true
 };
 
 /**
@@ -237,6 +267,90 @@ async function executeBatched(tasks, batchSize = MAX_PARALLEL_REQUESTS) {
     return results;
 }
 
+// =============================================================================
+// CACHING UTILITIES
+// =============================================================================
+
+/**
+ * Get cached data if it exists and is not expired.
+ * 
+ * @param {string} cacheKey - The storage key for the cached data
+ * @param {number} ttlMs - Time to live in milliseconds
+ * @returns {Promise<{hit: boolean, data: any}>} Cache result
+ */
+async function getCachedData(cacheKey, ttlMs = CACHE_CONFIG.LIFECYCLE_TTL) {
+    if (!CACHE_CONFIG.ENABLED) {
+        console.log(`[Cache] Caching disabled, skipping cache lookup for ${cacheKey}`);
+        return { hit: false, data: null };
+    }
+    
+    try {
+        const cached = await storage.get(cacheKey);
+        
+        if (!cached) {
+            console.log(`[Cache] No cached data found for ${cacheKey}`);
+            return { hit: false, data: null };
+        }
+        
+        const { timestamp, data } = cached;
+        const age = Date.now() - timestamp;
+        
+        if (age > ttlMs) {
+            console.log(`[Cache] Cache expired for ${cacheKey} (age: ${Math.round(age / 1000)}s, TTL: ${Math.round(ttlMs / 1000)}s)`);
+            return { hit: false, data: null };
+        }
+        
+        console.log(`[Cache] Cache HIT for ${cacheKey} (age: ${Math.round(age / 1000)}s)`);
+        return { hit: true, data };
+    } catch (error) {
+        console.error(`[Cache] Error reading cache for ${cacheKey}:`, error);
+        return { hit: false, data: null };
+    }
+}
+
+/**
+ * Store data in cache with timestamp.
+ * 
+ * @param {string} cacheKey - The storage key for the cached data
+ * @param {any} data - The data to cache
+ * @returns {Promise<boolean>} True if successful
+ */
+async function setCachedData(cacheKey, data) {
+    if (!CACHE_CONFIG.ENABLED) {
+        console.log(`[Cache] Caching disabled, skipping cache write for ${cacheKey}`);
+        return false;
+    }
+    
+    try {
+        await storage.set(cacheKey, {
+            timestamp: Date.now(),
+            data
+        });
+        console.log(`[Cache] Data cached for ${cacheKey}`);
+        return true;
+    } catch (error) {
+        console.error(`[Cache] Error writing cache for ${cacheKey}:`, error);
+        return false;
+    }
+}
+
+/**
+ * Invalidate (delete) cached data.
+ * 
+ * @param {string} cacheKey - The storage key to invalidate
+ * @returns {Promise<boolean>} True if successful
+ */
+async function invalidateCache(cacheKey) {
+    try {
+        await storage.delete(cacheKey);
+        console.log(`[Cache] Cache invalidated for ${cacheKey}`);
+        return true;
+    } catch (error) {
+        console.error(`[Cache] Error invalidating cache for ${cacheKey}:`, error);
+        return false;
+    }
+}
+
 /**
  * Known ServiceType values (used for parsing from the end of summary)
  * Format: "Offer: {Unit} - {Customer} - {ServiceType}"
@@ -283,20 +397,24 @@ const LINK_TYPES = {
 };
 
 /**
- * Custom Field IDs for date fields
+ * Get the configured field mappings from settings or use defaults.
+ * This function is called at runtime to get the current field configuration.
+ * 
+ * @param {Object} settings - The app settings object (or null)
+ * @returns {Object} Field mappings object with date fields and team field
  */
-const DATE_FIELDS = {
-    stopOfUnit: 'customfield_10147',
-    overhaulStart: 'customfield_10148',
-    overhaulEnd: 'customfield_10149',
-    startOfCommissioning: 'customfield_10150'
-};
-
-/**
- * Custom Field ID for Team field
- * This field is set on Offers and applies to the entire service lifecycle
- */
-const TEAM_FIELD = 'customfield_10001';
+function getFieldMappings(settings) {
+    const mappings = settings?.fieldMappings || DEFAULT_FIELD_MAPPINGS;
+    return {
+        dateFields: {
+            stopOfUnit: mappings.stopOfUnit || DEFAULT_FIELD_MAPPINGS.stopOfUnit,
+            overhaulStart: mappings.overhaulStart || DEFAULT_FIELD_MAPPINGS.overhaulStart,
+            overhaulEnd: mappings.overhaulEnd || DEFAULT_FIELD_MAPPINGS.overhaulEnd,
+            startOfCommissioning: mappings.startOfCommissioning || DEFAULT_FIELD_MAPPINGS.startOfCommissioning
+        },
+        teamField: mappings.team || DEFAULT_FIELD_MAPPINGS.team
+    };
+}
 
 /**
  * Check if a date is within this week
@@ -393,9 +511,10 @@ function parseSummary(summary) {
 /**
  * Fetch all Offers/Orders from a Jira project using JQL
  * @param {string} projectKey - The Jira project key (e.g., 'FSSS')
+ * @param {Object} fieldMappings - The configured field mappings
  * @returns {Promise<Array>} Array of issue objects
  */
-async function fetchOffersOrders(projectKey) {
+async function fetchOffersOrders(projectKey, fieldMappings) {
     console.log(`[fetchOffersOrders] Fetching from project: ${projectKey}`);
     
     // Validate project key before using in JQL
@@ -419,9 +538,19 @@ async function fetchOffersOrders(projectKey) {
             // Use the new /rest/api/3/search/jql endpoint with GET method
             // Build query parameters - fields must be comma-separated for GET
             // Note: Do NOT use encodeURIComponent - the route template handles encoding
-            // Include date fields: Stop of unit, Overhaul start/end, Start of commissioning
-            // Include Team field (customfield_10001) for filtering
-const fieldsParam = 'summary,issuetype,issuelinks,status,customfield_10245,customfield_10246,customfield_10147,customfield_10148,customfield_10149,customfield_10150,customfield_10001';
+            // Include configured date fields and team field from settings
+            const { dateFields, teamField } = fieldMappings;
+            const customFields = [
+                dateFields.stopOfUnit,
+                dateFields.overhaulStart,
+                dateFields.overhaulEnd,
+                dateFields.startOfCommissioning,
+                teamField,
+                'customfield_10245',  // Additional asset fields
+                'customfield_10246'
+            ].filter(f => f).join(',');
+            
+const fieldsParam = `summary,issuetype,issuelinks,status,${customFields}`;
             
             console.log(`[fetchOffersOrders] Using GET with jql: ${jql}`);
             
@@ -636,9 +765,10 @@ async function fetchEpicWithTasks(epicKey) {
  * Build the complete Customer Lifecycle data structure
  * @param {string} projectKey - The Jira project key
  * @param {string} cloudId - The Atlassian cloud ID
+ * @param {Object} fieldMappings - The configured field mappings
  * @returns {Promise<Object>} Structured data grouped by customer
  */
-async function buildCustomerLifecycleData(projectKey, cloudId) {
+async function buildCustomerLifecycleData(projectKey, cloudId, fieldMappings) {
     console.log('[buildCustomerLifecycleData] Starting data collection');
     
     // Step 1: Get workspace ID
@@ -647,8 +777,8 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
         throw new Error('Could not get Assets workspace ID');
     }
     
-    // Step 2: Fetch all Offers/Orders
-    const allIssues = await fetchOffersOrders(projectKey);
+    // Step 2: Fetch all Offers/Orders with configured field mappings
+    const allIssues = await fetchOffersOrders(projectKey, fieldMappings);
     
     // Step 3-5: SKIPPED - We now parse Customer/Unit from Summary instead of fetching Assets
     // This significantly speeds up the loading time
@@ -691,21 +821,24 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
     // First pass: collect all issues and their parsed data
     const issueMap = {}; // key -> issue data
     
+    // Get field IDs from mappings
+    const { dateFields, teamField } = fieldMappings;
+    
     for (const issue of allIssues) {
         const f = issue.fields;
         const parsed = parseSummary(f?.summary);
         
-        // Extract date fields
+        // Extract date fields using configured field mappings
         const dates = {
-            stopOfUnit: f?.[DATE_FIELDS.stopOfUnit] || null,
-            overhaulStart: f?.[DATE_FIELDS.overhaulStart] || null,
-            overhaulEnd: f?.[DATE_FIELDS.overhaulEnd] || null,
-            startOfCommissioning: f?.[DATE_FIELDS.startOfCommissioning] || null
+            stopOfUnit: f?.[dateFields.stopOfUnit] || null,
+            overhaulStart: f?.[dateFields.overhaulStart] || null,
+            overhaulEnd: f?.[dateFields.overhaulEnd] || null,
+            startOfCommissioning: f?.[dateFields.startOfCommissioning] || null
         };
         
-        // Extract Team field - can be a string, object with name/value, or null
+        // Extract Team field using configured field mapping
         // Team is typically set on Offers and applies to the whole service lifecycle
-        const teamRaw = f?.[TEAM_FIELD];
+        const teamRaw = f?.[teamField];
         let team = null;
         if (teamRaw) {
             // Handle different possible formats of the team field
@@ -1147,6 +1280,7 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
  */
 resolver.define('getLifecycleData', async (req) => {
     console.log('[getLifecycleData] Request received');
+    const forceRefresh = req.payload?.forceRefresh === true;
     
     try {
         // =====================================================================
@@ -1201,7 +1335,33 @@ resolver.define('getLifecycleData', async (req) => {
         const cloudId = req.context.cloudId;
         console.log(`[getLifecycleData] Cloud ID: ${cloudId}`);
         
-        const data = await buildCustomerLifecycleData(projectKey, cloudId);
+        // =====================================================================
+        // STEP 3: Check Cache (unless force refresh requested)
+        // =====================================================================
+        const cacheKey = `${STORAGE_KEYS.LIFECYCLE_CACHE}-${projectKey}`;
+        const cacheEnabled = settings?.cacheEnabled !== false; // Default to enabled
+        
+        if (cacheEnabled && !forceRefresh) {
+            const cached = await getCachedData(cacheKey, CACHE_CONFIG.LIFECYCLE_TTL);
+            if (cached.hit) {
+                console.log(`[getLifecycleData] Returning cached data for ${projectKey}`);
+                return {
+                    ...cached.data,
+                    fromCache: true,
+                    cacheAge: Math.round((Date.now() - cached.data._cachedAt) / 1000)
+                };
+            }
+        } else if (forceRefresh) {
+            console.log(`[getLifecycleData] Force refresh requested, skipping cache`);
+        }
+        
+        // =====================================================================
+        // STEP 4: Get Field Mappings and Fetch Fresh Data
+        // =====================================================================
+        const fieldMappings = getFieldMappings(settings);
+        console.log(`[getLifecycleData] Using field mappings:`, fieldMappings);
+        
+        const data = await buildCustomerLifecycleData(projectKey, cloudId, fieldMappings);
         
         // Calculate summary statistics from units
         let totalOffers = 0;
@@ -1246,15 +1406,27 @@ resolver.define('getLifecycleData', async (req) => {
             avgProgress: progressCount > 0 ? Math.round(totalProgress / progressCount) : 0
         };
         
-        return {
+        const result = {
             summary,
             customers: data.customers,
             noCustomer: data.noCustomer,
             upcomingThisWeek: data.upcomingThisWeek,
             upcomingThisMonth: data.upcomingThisMonth,
             // Migration tracking data
-            migrationStats: data.migrationStats
+            migrationStats: data.migrationStats,
+            // Cache metadata
+            fromCache: false,
+            _cachedAt: Date.now()
         };
+        
+        // =====================================================================
+        // STEP 5: Cache the result for future requests
+        // =====================================================================
+        if (cacheEnabled) {
+            await setCachedData(cacheKey, result);
+        }
+        
+        return result;
     } catch (error) {
         console.error('[getLifecycleData] Error:', error);
         console.error('[getLifecycleData] Stack:', error.stack);
@@ -1354,21 +1526,141 @@ resolver.define('saveSettings', async (req) => {
                 .filter(g => g.length > 0);
         }
         
+        // Validate field mappings if provided
+        let fieldMappings = settings.fieldMappings;
+        if (fieldMappings) {
+            // Ensure all field IDs are valid format (customfield_XXXXX or standard field names)
+            const validFieldPattern = /^(customfield_\d+|[a-z]+)$/i;
+            for (const [key, value] of Object.entries(fieldMappings)) {
+                if (value && !validFieldPattern.test(value)) {
+                    console.warn(`[saveSettings] Invalid field ID format for ${key}: ${value}`);
+                    // Don't reject, just warn - the field might still work
+                }
+            }
+        } else {
+            // Use existing or default field mappings
+            const existingSettings = await storage.get(STORAGE_KEYS.SETTINGS);
+            fieldMappings = existingSettings?.fieldMappings || DEFAULT_FIELD_MAPPINGS;
+        }
+        
         // Build final settings object with defaults for missing fields
         const finalSettings = {
             allowedGroups: settings.allowedGroups || DEFAULT_SETTINGS.allowedGroups,
             restrictAccess: Boolean(settings.restrictAccess),
             projectKey: settings.projectKey || DEFAULT_SETTINGS.projectKey,
+            fieldMappings: fieldMappings,
+            cacheEnabled: settings.cacheEnabled !== false, // Default to true
             updatedAt: new Date().toISOString()
         };
         
         // Save to storage
         await storage.set(STORAGE_KEYS.SETTINGS, finalSettings);
         
+        // Invalidate cache when settings change (field mappings might have changed)
+        const cacheKey = `${STORAGE_KEYS.LIFECYCLE_CACHE}-${finalSettings.projectKey}`;
+        await invalidateCache(cacheKey);
+        console.log('[saveSettings] Cache invalidated due to settings change');
+        
         console.log('[saveSettings] Settings saved successfully:', finalSettings);
         return { success: true, settings: finalSettings };
     } catch (error) {
         console.error('[saveSettings] Error:', error);
+        return { error: error.message };
+    }
+});
+
+/**
+ * Get available Jira custom fields for selection in admin UI
+ * Returns a list of custom fields that can be mapped to app fields.
+ */
+resolver.define('getAvailableFields', async (req) => {
+    console.log('[getAvailableFields] Fetching custom fields');
+    
+    try {
+        // Fetch all fields from Jira
+        const response = await api.asUser().requestJira(
+            route`/rest/api/3/field`
+        );
+        
+        const result = await processApiResponse(response, 'Fetch fields');
+        
+        if (!result.ok) {
+            console.error('[getAvailableFields] API error:', result.error);
+            return { error: result.error, fields: [] };
+        }
+        
+        // Filter and format fields for the UI
+        // We're interested in custom fields, especially date fields and select fields
+        const fields = result.data
+            .filter(f => f.custom || f.id.startsWith('customfield_'))
+            .map(f => ({
+                id: f.id,
+                name: f.name,
+                type: f.schema?.type || 'unknown',
+                customType: f.schema?.custom || null,
+                description: f.description || null
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Also include some standard date fields that might be useful
+        const standardDateFields = [
+            { id: 'duedate', name: 'Due Date', type: 'date', customType: null },
+            { id: 'created', name: 'Created', type: 'datetime', customType: null },
+            { id: 'updated', name: 'Updated', type: 'datetime', customType: null }
+        ];
+        
+        // Categorize fields for easier selection in UI
+        const dateFields = fields.filter(f => 
+            f.type === 'date' || 
+            f.type === 'datetime' || 
+            f.customType?.includes('date')
+        );
+        
+        const selectFields = fields.filter(f => 
+            f.type === 'option' || 
+            f.customType?.includes('select') ||
+            f.customType?.includes('radio')
+        );
+        
+        const teamFields = fields.filter(f =>
+            f.name.toLowerCase().includes('team') ||
+            f.type === 'option' ||
+            f.customType?.includes('select')
+        );
+        
+        console.log(`[getAvailableFields] Found ${fields.length} custom fields (${dateFields.length} date, ${selectFields.length} select)`);
+        
+        return {
+            fields,
+            dateFields: [...standardDateFields, ...dateFields],
+            selectFields,
+            teamFields,
+            total: fields.length
+        };
+    } catch (error) {
+        console.error('[getAvailableFields] Error:', error);
+        return { error: error.message, fields: [] };
+    }
+});
+
+/**
+ * Invalidate the lifecycle data cache (force refresh on next request)
+ * Called from admin UI or when settings change.
+ */
+resolver.define('invalidateCache', async (req) => {
+    console.log('[invalidateCache] Invalidating cache');
+    
+    try {
+        // Get current project key from settings
+        const settings = await storage.get(STORAGE_KEYS.SETTINGS);
+        const projectKey = settings?.projectKey || DEFAULT_SETTINGS.projectKey;
+        
+        const cacheKey = `${STORAGE_KEYS.LIFECYCLE_CACHE}-${projectKey}`;
+        await invalidateCache(cacheKey);
+        
+        return { success: true, message: 'Cache invalidated successfully' };
+    } catch (error) {
+        console.error('[invalidateCache] Error:', error);
         return { error: error.message };
     }
 });

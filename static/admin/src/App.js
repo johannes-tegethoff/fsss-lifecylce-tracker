@@ -7,10 +7,23 @@ import './App.css';
  * 
  * This admin page allows Jira administrators to configure:
  * 1. Allowed Groups - Which Jira groups can access the app
- * 2. Custom Field Mappings - Map date fields to Jira custom fields (future)
+ * 2. Custom Field Mappings - Map date fields to Jira custom fields
+ * 3. Cache Settings - Control data caching behavior
  * 
  * Settings are stored in Forge Key-Value Storage and persist across deployments.
  */
+
+/**
+ * Default field mappings - these match the FSSS project configuration.
+ * Can be overridden for other Jira instances.
+ */
+const DEFAULT_FIELD_MAPPINGS = {
+    stopOfUnit: 'customfield_10147',
+    overhaulStart: 'customfield_10148',
+    overhaulEnd: 'customfield_10149',
+    startOfCommissioning: 'customfield_10150',
+    team: 'customfield_10001'
+};
 function App() {
     // =========================================================================
     // STATE
@@ -26,12 +39,25 @@ function App() {
     const [settings, setSettings] = useState({
         allowedGroups: [],
         restrictAccess: false,
-        projectKey: 'FSSS'
+        projectKey: 'FSSS',
+        fieldMappings: DEFAULT_FIELD_MAPPINGS,
+        cacheEnabled: true
     });
     
     // Available groups from Jira (for selection)
     const [availableGroups, setAvailableGroups] = useState([]);
     const [loadingGroups, setLoadingGroups] = useState(false);
+    
+    // Available custom fields from Jira
+    const [availableFields, setAvailableFields] = useState({
+        dateFields: [],
+        teamFields: [],
+        all: []
+    });
+    const [loadingFields, setLoadingFields] = useState(false);
+    
+    // Cache invalidation state
+    const [invalidatingCache, setInvalidatingCache] = useState(false);
     
     // New group input
     const [newGroupName, setNewGroupName] = useState('');
@@ -59,7 +85,9 @@ function App() {
             setSettings({
                 allowedGroups: result.allowedGroups || [],
                 restrictAccess: result.restrictAccess ?? false,
-                projectKey: result.projectKey || 'FSSS'
+                projectKey: result.projectKey || 'FSSS',
+                fieldMappings: result.fieldMappings || DEFAULT_FIELD_MAPPINGS,
+                cacheEnabled: result.cacheEnabled !== false
             });
         } catch (err) {
             console.error('[Admin] Error loading settings:', err);
@@ -93,11 +121,40 @@ function App() {
         }
     }, []);
     
+    /**
+     * Load available Jira custom fields for field mapping
+     */
+    const loadAvailableFields = useCallback(async () => {
+        setLoadingFields(true);
+        
+        try {
+            console.log('[Admin] Loading available fields...');
+            const result = await invoke('getAvailableFields');
+            
+            if (result.error) {
+                console.warn('[Admin] Could not load fields:', result.error);
+                return;
+            }
+            
+            console.log('[Admin] Available fields:', result);
+            setAvailableFields({
+                dateFields: result.dateFields || [],
+                teamFields: result.teamFields || [],
+                all: result.fields || []
+            });
+        } catch (err) {
+            console.error('[Admin] Error loading fields:', err);
+        } finally {
+            setLoadingFields(false);
+        }
+    }, []);
+    
     // Load data on mount
     useEffect(() => {
         loadSettings();
         loadAvailableGroups();
-    }, [loadSettings, loadAvailableGroups]);
+        loadAvailableFields();
+    }, [loadSettings, loadAvailableGroups, loadAvailableFields]);
 
     // =========================================================================
     // SAVE SETTINGS
@@ -177,6 +234,84 @@ function App() {
             ...prev,
             restrictAccess: !prev.restrictAccess
         }));
+    };
+    
+    /**
+     * Toggle cache on/off
+     */
+    const toggleCache = () => {
+        setSettings(prev => ({
+            ...prev,
+            cacheEnabled: !prev.cacheEnabled
+        }));
+    };
+    
+    /**
+     * Update a field mapping
+     */
+    const updateFieldMapping = (fieldKey, fieldId) => {
+        setSettings(prev => ({
+            ...prev,
+            fieldMappings: {
+                ...prev.fieldMappings,
+                [fieldKey]: fieldId
+            }
+        }));
+    };
+    
+    /**
+     * Invalidate the data cache
+     */
+    const handleInvalidateCache = async () => {
+        setInvalidatingCache(true);
+        
+        try {
+            const result = await invoke('invalidateCache');
+            
+            if (result.error) {
+                throw new Error(result.error);
+            }
+            
+            setSuccessMessage('Cache wurde erfolgreich geleert!');
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (err) {
+            setError('Fehler beim Leeren des Caches: ' + err.message);
+        } finally {
+            setInvalidatingCache(false);
+        }
+    };
+    
+    /**
+     * Render a field mapping selector
+     */
+    const renderFieldSelector = (label, fieldKey, hint, fieldOptions) => {
+        const currentValue = settings.fieldMappings?.[fieldKey] || '';
+        
+        return (
+            <div className="setting-row">
+                <div className="setting-label">
+                    <strong>{label}</strong>
+                    <span className="setting-hint">{hint}</span>
+                </div>
+                <div className="setting-control">
+                    <select
+                        className="field-select"
+                        value={currentValue}
+                        onChange={(e) => updateFieldMapping(fieldKey, e.target.value)}
+                    >
+                        <option value="">-- Feld auswählen --</option>
+                        {fieldOptions.map(field => (
+                            <option key={field.id} value={field.id}>
+                                {field.name} ({field.id})
+                            </option>
+                        ))}
+                    </select>
+                    {currentValue && (
+                        <span className="field-id-display">{currentValue}</span>
+                    )}
+                </div>
+            </div>
+        );
     };
 
     // =========================================================================
@@ -374,6 +509,129 @@ function App() {
                     </div>
                 </section>
                 
+                {/* Field Mappings Section */}
+                <section className="admin-section">
+                    <div className="section-header">
+                        <h2>🔗 Feld-Zuordnungen</h2>
+                        <p className="section-description">
+                            Ordnen Sie die Custom Fields aus Ihrem Jira-Projekt den App-Feldern zu.
+                            {loadingFields && <span className="loading-inline"> Lade Felder...</span>}
+                        </p>
+                    </div>
+                    
+                    <div className="section-content">
+                        <div className="field-mappings-grid">
+                            <h3>📅 Datums-Felder</h3>
+                            
+                            {renderFieldSelector(
+                                'Stop of Unit',
+                                'stopOfUnit',
+                                'Das Datum, an dem die Einheit stillgelegt wird.',
+                                availableFields.dateFields
+                            )}
+                            
+                            {renderFieldSelector(
+                                'Overhaul Start',
+                                'overhaulStart',
+                                'Das Startdatum der Überholung.',
+                                availableFields.dateFields
+                            )}
+                            
+                            {renderFieldSelector(
+                                'Overhaul End',
+                                'overhaulEnd',
+                                'Das Enddatum der Überholung.',
+                                availableFields.dateFields
+                            )}
+                            
+                            {renderFieldSelector(
+                                'Start of Commissioning',
+                                'startOfCommissioning',
+                                'Das Datum der Inbetriebnahme.',
+                                availableFields.dateFields
+                            )}
+                            
+                            <h3>👥 Team-Feld</h3>
+                            
+                            {renderFieldSelector(
+                                'Team',
+                                'team',
+                                'Das Feld, das das zuständige Team enthält.',
+                                availableFields.teamFields.length > 0 ? availableFields.teamFields : availableFields.all
+                            )}
+                        </div>
+                        
+                        {/* Manual Field ID Input */}
+                        <div className="manual-field-input">
+                            <p className="manual-hint">
+                                💡 <strong>Tipp:</strong> Wenn ein Feld nicht in der Liste erscheint, 
+                                können Sie die Field-ID manuell eingeben (z.B. "customfield_10147").
+                            </p>
+                        </div>
+                    </div>
+                </section>
+                
+                {/* Cache Settings Section */}
+                <section className="admin-section">
+                    <div className="section-header">
+                        <h2>⚡ Performance & Cache</h2>
+                        <p className="section-description">
+                            Steuern Sie das Caching-Verhalten für bessere Performance.
+                        </p>
+                    </div>
+                    
+                    <div className="section-content">
+                        <div className="setting-row">
+                            <div className="setting-label">
+                                <strong>Daten-Caching</strong>
+                                <span className="setting-hint">
+                                    Wenn aktiviert, werden Daten für 5 Minuten zwischengespeichert.
+                                    Dies verbessert die Ladezeit erheblich.
+                                </span>
+                            </div>
+                            <div className="setting-control">
+                                <button 
+                                    className={`toggle-btn ${settings.cacheEnabled ? 'active' : ''}`}
+                                    onClick={toggleCache}
+                                    aria-pressed={settings.cacheEnabled}
+                                >
+                                    <span className="toggle-track">
+                                        <span className="toggle-thumb"></span>
+                                    </span>
+                                    <span className="toggle-label">
+                                        {settings.cacheEnabled ? 'Aktiv' : 'Inaktiv'}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="setting-row">
+                            <div className="setting-label">
+                                <strong>Cache leeren</strong>
+                                <span className="setting-hint">
+                                    Löscht alle zwischengespeicherten Daten. Nützlich nach Änderungen in Jira.
+                                </span>
+                            </div>
+                            <div className="setting-control">
+                                <button 
+                                    className="cache-clear-btn"
+                                    onClick={handleInvalidateCache}
+                                    disabled={invalidatingCache}
+                                >
+                                    {invalidatingCache ? (
+                                        <>
+                                            <span className="spinner-small"></span>
+                                            Wird geleert...
+                                        </>
+                                    ) : (
+                                        '🗑️ Cache leeren'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
                 {/* Info Section */}
                 <section className="admin-section info-section">
                     <div className="info-box">
@@ -390,6 +648,14 @@ function App() {
                             <li>
                                 <strong>Projekt-Key:</strong> Muss ein gültiger Jira-Projekt-Key sein 
                                 (Großbuchstaben und Zahlen, z.B. "FSSS", "PROJ1").
+                            </li>
+                            <li>
+                                <strong>Feld-Zuordnungen:</strong> Wählen Sie die Custom Fields aus Ihrem 
+                                Jira-Projekt aus. Die Field-IDs haben das Format "customfield_XXXXX".
+                            </li>
+                            <li>
+                                <strong>Cache:</strong> Aktiviertes Caching reduziert API-Aufrufe und 
+                                beschleunigt das Laden. Der Cache wird automatisch nach 5 Minuten erneuert.
                             </li>
                         </ul>
                     </div>
