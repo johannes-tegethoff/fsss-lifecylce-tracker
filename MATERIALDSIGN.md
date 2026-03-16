@@ -1,155 +1,517 @@
-# Material UI
+# UI Framework Analyse für Forge Custom UI Apps
 
-This is the documentation for the Material UI package.
-It contains comprehensive guides, components, and utilities for building user interfaces.
+> **Erstellt:** März 2026  
+> **Kontext:** Service Lifecycle Tracker - Forge App  
+> **Status:** Lessons Learned aus gescheitertem Material UI Migrations-Versuch
 
-## Components
+---
 
-- [App Bar React component](https://mui.com/material-ui/react-app-bar.md): The App Bar displays information and actions relating to the current screen.
-- [Backdrop React Component](https://mui.com/material-ui/react-backdrop.md): The Backdrop component narrows the user's focus to a particular element on the screen.
-- [Bottom Navigation React component](https://mui.com/material-ui/react-bottom-navigation.md): The Bottom Navigation bar allows movement between primary destinations in an app.
-- [Circular, Linear progress React components](https://mui.com/material-ui/react-progress.md): Progress indicators commonly known as spinners, express an unspecified wait time or display the length of a process.
-- [CSS Baseline](https://mui.com/material-ui/react-css-baseline.md): The CssBaseline component helps to kickstart an elegant, consistent, and simple baseline to build upon.
-- [Detect click outside React component](https://mui.com/material-ui/react-click-away-listener.md): The Click-Away Listener component detects when a click event happens outside of its child element.
-- [How to customize](https://mui.com/material-ui/customization/how-to-customize.md): Learn how to customize Material UI components by taking advantage of different strategies for specific use cases.
-- [Image List React component](https://mui.com/material-ui/react-image-list.md): The Image List displays a collection of images in an organized grid.
-- [InitColorSchemeScript component](https://mui.com/material-ui/react-init-color-scheme-script.md): The InitColorSchemeScript component eliminates dark mode flickering in server-side-rendered applications.
-- [Links](https://mui.com/material-ui/react-link.md): The Link component allows you to easily customize anchor elements with your theme colors and typography styles.
-- [No SSR React component](https://mui.com/material-ui/react-no-ssr.md): The No-SSR component defers the rendering of children components from the server to the client.
-- [Number field React component](https://mui.com/material-ui/react-number-field.md): A React component for capturing numeric input from users.
-- [React Accordion component](https://mui.com/material-ui/react-accordion.md): The Accordion component lets users show and hide sections of related content on a page.
-- [React Alert component](https://mui.com/material-ui/react-alert.md): Alerts display brief messages for the user without interrupting their use of the app.
-- [React Autocomplete component](https://mui.com/material-ui/react-autocomplete.md): The autocomplete is a normal text input enhanced by a panel of suggested options.
-- [React Avatar component](https://mui.com/material-ui/react-avatar.md): Avatars are found throughout material design with uses in everything from tables to dialog menus.
-- [React Badge component](https://mui.com/material-ui/react-badge.md): Badge generates a small badge to the top-right of its child(ren).
-- [React Box](https://mui.com/material-ui/react-box.md): The Box component is a generic, theme-aware container with access to CSS utilities from MUI System.
-- [React Breadcrumbs component](https://mui.com/material-ui/react-breadcrumbs.md): A breadcrumbs is a list of links that help visualize a page's location within a site's hierarchical structure, it allows navigation up to any of the ancestors.
-- [React Button component](https://mui.com/material-ui/react-button.md): Buttons allow users to take actions, and make choices, with a single tap.
-- [React Button Group component](https://mui.com/material-ui/react-button-group.md): The ButtonGroup component can be used to group related buttons.
-- [React Card component](https://mui.com/material-ui/react-card.md): Cards contain content and actions about a single subject.
-- [React Checkbox component](https://mui.com/material-ui/react-checkbox.md): Checkboxes allow the user to select one or more items from a set.
-- [React Chip component](https://mui.com/material-ui/react-chip.md): Chips are compact elements that represent an input, attribute, or action.
-- [React Container component](https://mui.com/material-ui/react-container.md): The container centers your content horizontally. It's the most basic layout element.
-- [React Dialog component](https://mui.com/material-ui/react-dialog.md): Dialogs inform users about a task and can contain critical information, require decisions, or involve multiple tasks.
-- [React Divider component](https://mui.com/material-ui/react-divider.md): The Divider component provides a thin, unobtrusive line for grouping elements to reinforce visual hierarchy.
-- [React Drawer component](https://mui.com/material-ui/react-drawer.md): The navigation drawers (or "sidebars") provide ergonomic access to destinations in a site or app functionality such as switching accounts.
-- [React Floating Action Button (FAB) component](https://mui.com/material-ui/react-floating-action-button.md): A Floating Action Button (FAB) performs the primary, or most common, action on a screen.
-- [React Grid component](https://mui.com/material-ui/react-grid.md): The responsive layout grid adapts to screen size and orientation, ensuring consistency across layouts.
-- [React GridLegacy component](https://mui.com/material-ui/react-grid-legacy.md): The Material Design responsive layout grid adapts to screen size and orientation, ensuring consistency across layouts.
-- [React Icon Component](https://mui.com/material-ui/icons.md): Guidance and suggestions for using icons with Material UI.
-- [React List component](https://mui.com/material-ui/react-list.md): Lists are continuous, vertical indexes of text or images.
-- [React Masonry component](https://mui.com/material-ui/react-masonry.md): Masonry lays out contents of varying dimensions as blocks of the same width and different height with configurable gaps.
-- [React Menu component](https://mui.com/material-ui/react-menu.md): Menus display a list of choices on temporary surfaces.
-- [React Modal component](https://mui.com/material-ui/react-modal.md): The modal component provides a solid foundation for creating dialogs, popovers, lightboxes, or whatever else.
-- [React Pagination component](https://mui.com/material-ui/react-pagination.md): The Pagination component enables the user to select a specific page from a range of pages.
-- [React Paper component](https://mui.com/material-ui/react-paper.md): The Paper component is a container for displaying content on an elevated surface.
-- [React Popover component](https://mui.com/material-ui/react-popover.md): A Popover can be used to display some content on top of another.
-- [React Popper component](https://mui.com/material-ui/react-popper.md): A Popper can be used to display some content on top of another. It's an alternative to react-popper.
-- [React Portal component](https://mui.com/material-ui/react-portal.md): The Portal component lets you render its children into a DOM node that exists outside of the Portal's own DOM hierarchy.
-- [React Radio Group component](https://mui.com/material-ui/react-radio-button.md): The Radio Group allows the user to select one option from a set.
-- [React Rating component](https://mui.com/material-ui/react-rating.md): Ratings provide insight regarding others' opinions and experiences, and can allow the user to submit a rating of their own.
-- [React Select component](https://mui.com/material-ui/react-select.md): Select components are used for collecting user provided information from a list of options.
-- [React Skeleton component](https://mui.com/material-ui/react-skeleton.md): Display a placeholder preview of your content before the data gets loaded to reduce load-time frustration.
-- [React Slider component](https://mui.com/material-ui/react-slider.md): Sliders allow users to make selections from a range of values.
-- [React Snackbar component](https://mui.com/material-ui/react-snackbar.md): Snackbars (also known as toasts) are used for brief notifications of processes that have been or will be performed.
-- [React Speed Dial component](https://mui.com/material-ui/react-speed-dial.md): When pressed, a floating action button can display three to six related actions in the form of a Speed Dial.
-- [React Stack component](https://mui.com/material-ui/react-stack.md): Stack is a container component for arranging elements vertically or horizontally.
-- [React Stepper component](https://mui.com/material-ui/react-stepper.md): Steppers convey progress through numbered steps. It provides a wizard-like workflow.
-- [React Switch component](https://mui.com/material-ui/react-switch.md): Switches toggle the state of a single setting on or off.
-- [React Table component](https://mui.com/material-ui/react-table.md): Tables display sets of data. They can be fully customized.
-- [React Tabs component](https://mui.com/material-ui/react-tabs.md): Tabs make it easy to explore and switch between different views.
-- [React Text Field component](https://mui.com/material-ui/react-text-field.md): Text Fields let users enter and edit text.
-- [React Timeline component](https://mui.com/material-ui/react-timeline.md): The timeline displays a list of events in chronological order.
-- [React Tooltip component](https://mui.com/material-ui/react-tooltip.md): Tooltips display informative text when users hover over, focus on, or tap an element.
-- [React Transition component](https://mui.com/material-ui/transitions.md): Transitions help to make a UI expressive and easy to use.
-- [React Typography component](https://mui.com/material-ui/react-typography.md): Use typography to present your design and content as clearly and efficiently as possible.
-- [Textarea Autosize React component](https://mui.com/material-ui/react-textarea-autosize.md): The Textarea Autosize component automatically adjusts its height to match the length of the content within.
-- [Toggle Button React component](https://mui.com/material-ui/react-toggle-button.md): A Toggle Button can be used to group related options.
+## TL;DR
 
-## Design Resources
+**Material UI funktioniert NICHT in Atlassian Forge Custom UI Apps** aufgrund der Content Security Policy (CSP). Verwende stattdessen **AtlasKit + Custom CSS**.
 
-- [Material UI for Figma](https://mui.com/material-ui/design-resources/material-ui-for-figma.md): Enhance designer-developer collaboration between Material UI and Figma.
-- [Material UI Sync plugin 🧪](https://mui.com/material-ui/design-resources/material-ui-sync.md): Sync is a Figma plugin that generates Material UI themes directly from design to code.
+---
 
-## Discover More
+## 🚫 Warum Material UI in Forge NICHT funktioniert
 
-- [Showcase](https://mui.com/material-ui/discover-more/showcase.md): Check out these public apps using Material UI to get inspired for your next project.
-- [Related projects](https://mui.com/material-ui/discover-more/related-projects.md): A carefully curated list of tools that expand or build on top of Material UI.
-- [Roadmap](https://mui.com/material-ui/discover-more/roadmap.md): Keep up with ongoing projects and help shape the future of Material UI.
-- [Sponsors and Backers](https://mui.com/material-ui/discover-more/backers.md): Support the development of the open-source projects of the MUI organization through crowdfunding.
-- [Vision](https://mui.com/material-ui/discover-more/vision.md): Our vision is to provide an elegant React implementation of the Material Design guidelines that can be customized to fully match your brand.
-- [Changelog](https://mui.com/material-ui/discover-more/changelog.md): Material UI follows Semantic Versioning 2.0.0.
+### Das Kernproblem: Content Security Policy (CSP)
 
-## Material UI
+Forge Custom UI Apps laufen in einem **sandboxed Iframe** mit einer sehr restriktiven Content Security Policy. Diese CSP ist von Atlassian vorgegeben und kann **NICHT** geändert werden.
 
-- [Material UI components](https://mui.com/material-ui/all-components.md): Every Material UI component available so far.
-- [Transfer list React component](https://mui.com/material-ui/react-transfer-list.md): A Transfer List (or "shuttle") enables the user to move one or more list items between lists.
-- [Media queries in React for responsive design](https://mui.com/material-ui/react-use-media-query.md): This React hook listens for matches to a CSS media query. It allows the rendering of components based on whether the query matches or not.
+#### Was die CSP blockiert:
 
-## Getting Started
+| Blockiert | Beschreibung | Auswirkung auf MUI |
+|-----------|--------------|--------------------|
+| **Inline Styles** | `style="..."` Attribute, die zur Runtime generiert werden | MUI generiert tausende inline Styles |
+| **Dynamische `<style>` Tags** | JavaScript, das `<style>` Elemente ins DOM injiziert | Emotion/Styled-Components Kernfunktion |
+| **`eval()` und ähnliches** | Dynamische Code-Ausführung | Manche CSS-in-JS Libraries nutzen dies |
+| **Externe Ressourcen** | CDN-Links für Fonts, Icons | MUI Roboto Font, Material Icons |
 
-- [Installation](https://mui.com/material-ui/getting-started/installation.md): Install Material UI, the world's most popular React UI framework.
-- [Usage](https://mui.com/material-ui/getting-started/usage.md): Learn the basics of working with Material UI components.
-- [Model Context Protocol (MCP) for MUI](https://mui.com/material-ui/getting-started/mcp.md): Access the official Material UI docs and code examples in your AI client.
-- [Example projects](https://mui.com/material-ui/getting-started/example-projects.md): A collection of examples and scaffolds integrating Material UI with popular libraries and frameworks.
-- [New Free React Templates](https://mui.com/material-ui/getting-started/templates.md): Browse our collection of free React templates to get started building your app with Material UI, including a React dashboard, React marketing page, and more.
-- [Learning resources](https://mui.com/material-ui/getting-started/learn.md): New to Material UI? Get up to speed quickly with our curated list of learning resources.
-- [Design resources](https://mui.com/material-ui/getting-started/design-resources.md): Be more efficient designing and developing with the same library.
-- [Frequently Asked Questions](https://mui.com/material-ui/getting-started/faq.md): Stuck on a particular problem? Check some of these common gotchas first in the FAQ.
-- [Supported components](https://mui.com/material-ui/getting-started/supported-components.md): The following is a list of Material Design components & features.
-- [Supported platforms](https://mui.com/material-ui/getting-started/supported-platforms.md): Learn about the platforms, from modern to old, that are supported by Material UI.
-- [Support](https://mui.com/material-ui/getting-started/support.md): Learn how to get support for Material UI components, including feature requests, bug fixes, and technical support from the team.
+### Material UI v5+ Architektur - Das Problem visualisiert
 
-## Customization
+```
+@mui/material (v5+)
+│
+├── @emotion/react      ← CSS-in-JS Runtime Engine
+│   ├── Generiert Styles zur RUNTIME (nicht Build-Zeit!)
+│   ├── Injiziert <style> Tags dynamisch ins DOM
+│   └── Nutzt Style-Hashing für CSS Scoping
+│
+├── @emotion/styled     ← styled() API
+│   ├── Kompiliert NICHT zur Build-Zeit
+│   └── Evaluiert Template Literals zur Runtime
+│
+└── @mui/system         ← sx prop, Theme System
+    ├── Konvertiert sx={{}} zu inline Styles zur Runtime
+    └── Theme-Werte werden zur Runtime aufgelöst
 
-- [Overriding component structure](https://mui.com/material-ui/customization/overriding-component-structure.md): Learn how to override the default DOM structure of Material UI components.
-- [Dark mode](https://mui.com/material-ui/customization/dark-mode.md): Material UI comes with two palette modes: light (the default) and dark.
-- [Color](https://mui.com/material-ui/customization/color.md): Convey meaning through color. Out of the box you get access to all colors in the Material Design guidelines.
-- [Right-to-left support](https://mui.com/material-ui/customization/right-to-left.md): Learn how to implement right-to-left (RTL) text with Material UI to support languages such as Arabic, Persian, and Hebrew.
-- [Shadow DOM](https://mui.com/material-ui/customization/shadow-dom.md): The shadow DOM lets you encapsulate parts of an app to keep them separate from global styles that target the regular DOM tree.
-- [Default theme viewer](https://mui.com/material-ui/customization/default-theme.md): This tree view allows you to explore how the theme object looks like with the default values.
-- [Theming](https://mui.com/material-ui/customization/theming.md): Customize Material UI with your theme. You can change the colors, the typography and much more.
-- [Creating themed components](https://mui.com/material-ui/customization/creating-themed-components.md): Learn how to create fully custom components that accept your app's theme.
-- [Themed components](https://mui.com/material-ui/customization/theme-components.md): You can customize a component's styles, default props, and more by using its component key inside the theme.
-- [Palette](https://mui.com/material-ui/customization/palette.md): The palette enables you to modify the color of the components to suit your brand.
-- [Typography](https://mui.com/material-ui/customization/typography.md): The theme provides a set of type sizes that work well together, and also with the layout grid.
-- [Spacing](https://mui.com/material-ui/customization/spacing.md): Use the theme.spacing() helper to create consistent spacing between the elements of your UI.
-- [Shape](https://mui.com/material-ui/customization/shape.md): The shape is a design token that helps control the border radius of components.
-- [Breakpoints](https://mui.com/material-ui/customization/breakpoints.md): API that enables the use of breakpoints in a wide variety of contexts.
-- [Container queries](https://mui.com/material-ui/customization/container-queries.md): Material UI provides a utility function for creating CSS container queries based on theme breakpoints.
-- [Density](https://mui.com/material-ui/customization/density.md): How to apply density to Material UI components.
-- [z-index](https://mui.com/material-ui/customization/z-index.md): z-index is the CSS property that helps control layout by providing a third axis to arrange content.
-- [Transitions](https://mui.com/material-ui/customization/transitions.md): These theme helpers allow you to create custom CSS transitions, you can customize the durations, easings and more.
-- [CSS Layers](https://mui.com/material-ui/customization/css-layers.md): Learn how to generate Material UI styles with cascade layers.
 
-## Guides
+Forge CSP Policy:
+┌─────────────────────────────────────────────────────────┐
+│  style-src 'self'     → Blockiert inline styles         │
+│  script-src 'self'    → Blockiert eval(), inline JS     │
+│  default-src 'self'   → Blockiert externe Ressourcen    │
+└─────────────────────────────────────────────────────────┘
+            │
+            ▼
+    🚫 ALLES BLOCKIERT
+```
 
-- [Building extensible themes](https://mui.com/material-ui/guides/building-extensible-themes.md): Learn how to build extensible themes with Material UI.
-- [Minimizing bundle size](https://mui.com/material-ui/guides/minimizing-bundle-size.md): Learn how to reduce your bundle size and improve development performance by avoiding costly import patterns.
-- [Server rendering](https://mui.com/material-ui/guides/server-rendering.md): The most common use case for server-side rendering is to handle the initial render when a user (or search engine crawler) first requests your app.
-- [Responsive UI](https://mui.com/material-ui/guides/responsive-ui.md): Material Design layouts encourage consistency across platforms, environments, and screen sizes by using uniform elements and spacing.
-- [Testing](https://mui.com/material-ui/guides/testing.md): Write tests to prevent regressions and write better code.
-- [Localization](https://mui.com/material-ui/guides/localization.md): Localization (also referred to as "l10n") is the process of adapting a product or content to a specific locale or market.
-- [API design approach](https://mui.com/material-ui/guides/api.md): We have learned a great deal regarding how Material UI is used, and the v1 rewrite allowed us to completely rethink the component API.
-- [TypeScript](https://mui.com/material-ui/guides/typescript.md): You can add static typing to JavaScript to improve developer productivity and code quality, thanks to TypeScript.
-- [Composition](https://mui.com/material-ui/guides/composition.md): Material UI tries to make composition as easy as possible.
-- [Content Security Policy (CSP)](https://mui.com/material-ui/guides/content-security-policy.md): This section covers the details of setting up a CSP.
+### Was passiert, wenn man MUI in Forge verwendet:
 
-## Integrations
+1. **App startet** → React rendert MUI Komponenten
+2. **Emotion initialisiert** → Versucht `<style>` Tags ins DOM zu injizieren
+3. **CSP blockiert** → Browser weigert sich, die Styles anzuwenden
+4. **Resultat:**
+   - ✅ HTML wird gerendert (Komponenten sind im DOM)
+   - ❌ Kein CSS wird angewendet
+   - ❌ Komponenten erscheinen "nackt" oder komplett kaputt
+   - ❌ Interaktive Features (Dropdowns, Modals) funktionieren nicht
 
-- [Next.js integration](https://mui.com/material-ui/integrations/nextjs.md): Learn how to use Material UI with Next.js.
-- [Routing libraries](https://mui.com/material-ui/integrations/routing.md): By default, the navigation is performed with a native &lt;a&gt; element. You can customize it, for instance, using Next.js's Link or react-router.
-- [Using styled-components](https://mui.com/material-ui/integrations/styled-components.md): Learn how to use styled-components instead of Emotion with Material UI.
-- [Style library interoperability](https://mui.com/material-ui/integrations/interoperability.md): While you can use the Emotion-based styling solution provided by Material UI, you can also use the one you already know, from plain CSS to styled-components.
-- [Theme scoping](https://mui.com/material-ui/integrations/theme-scoping.md): Learn how to use multiple styling solutions in a single Material UI app.
+### Console Errors die du sehen wirst:
 
-## Migration
+```
+Refused to apply inline style because it violates the following 
+Content Security Policy directive: "style-src 'self'"
 
-- [Upgrade to Grid v2](https://mui.com/material-ui/migration/upgrade-to-grid-v2.md): This guide explains how and why to migrate from the GridLegacy component to the Grid component.
-- [Migration from @material-ui/pickers](https://mui.com/material-ui/migration/pickers-migration.md): <p class="description"><code>@material-ui/pickers</code> was moved to the <code>@mui/lab</code>.</p>
-- [Upgrade to v7](https://mui.com/material-ui/migration/upgrade-to-v7.md): This guide explains how to upgrade from Material UI v6 to v7.
-- [Upgrade to v6](https://mui.com/material-ui/migration/upgrade-to-v6.md): This guide explains why and how to upgrade from Material UI v5 to v6.
-- [Migrating from deprecated APIs](https://mui.com/material-ui/migration/migrating-from-deprecated-apis.md): Learn how to migrate away from recently deprecated APIs before they become breaking changes.
-- [Migrating to v5: getting started](https://mui.com/material-ui/migration/migration-v4.md): This guide explains how and why to migrate from Material UI v4 to v5.
-- [Migration from v3 to v4](https://mui.com/material-ui/migration/migration-v3.md): Yeah, v4 has been released!
-- [Migration from v0.x to v1](https://mui.com/material-ui/migration/migration-v0x.md): Yeah, v1 has been released! Take advantage of 2 years worth of effort.
+Refused to execute inline script because it violates the following 
+Content Security Policy directive: "script-src 'self'"
+```
+
+### Screenshot-Vergleich (konzeptionell)
+
+```
+Erwartete UI:                    Tatsächliche UI in Forge:
+┌─────────────────────┐          ┌─────────────────────┐
+│ ┌─────────────────┐ │          │ Click me            │
+│ │   Click me      │ │          │                     │
+│ └─────────────────┘ │          │ Some text here      │
+│                     │          │                     │
+│  Some styled text   │          │ ○ Option 1          │
+│                     │          │ ○ Option 2          │
+│  ◉ Option 1         │          │                     │
+│  ○ Option 2         │          │                     │
+└─────────────────────┘          └─────────────────────┘
+     Mit Styling                    Ohne Styling (raw HTML)
+```
+
+---
+
+## 🔴 Frameworks die NICHT funktionieren
+
+| Framework | Grund | Getestet? |
+|-----------|-------|----------|
+| **Material UI (MUI) v5+** | Nutzt Emotion für Runtime Style-Injection | ✅ Ja |
+| **Material UI v4** | Nutzt JSS (auch Runtime Style-Injection) | ⚠️ Wahrscheinlich |
+| **Chakra UI** | Nutzt Emotion | ⚠️ Wahrscheinlich |
+| **Styled-Components** | Runtime Style-Injection | ⚠️ Wahrscheinlich |
+| **Emotion** | Runtime Style-Injection | ✅ Ja (durch MUI) |
+| **Ant Design** | Nutzt CSS-in-JS unter der Haube | ⚠️ Wahrscheinlich |
+| **Mantine** | Nutzt Emotion | ⚠️ Wahrscheinlich |
+| **Theme UI** | Nutzt Emotion | ⚠️ Wahrscheinlich |
+
+---
+
+## 🟢 Frameworks/Ansätze die FUNKTIONIEREN
+
+### 1. AtlasKit (Atlassian Design System) ✅ **EMPFOHLEN**
+
+```javascript
+import Button from '@atlaskit/button';
+import Select from '@atlaskit/select';
+import { DynamicTable } from '@atlaskit/dynamic-table';
+import Modal from '@atlaskit/modal-dialog';
+```
+
+**Vorteile:**
+- ✅ Native Forge-Unterstützung (von Atlassian selbst)
+- ✅ Konsistent mit Jira/Confluence UI (User fühlt sich "zuhause")
+- ✅ Aktiv gepflegt von Atlassian
+- ✅ Accessibility eingebaut (WCAG konform)
+- ✅ Dark Mode Support über Atlassian Theming
+
+**Nachteile:**
+- ❌ Begrenzte Komponenten-Auswahl (nicht so umfangreich wie MUI)
+- ❌ Weniger Customization-Optionen
+- ❌ Dokumentation manchmal lückenhaft oder veraltet
+- ❌ Peer-Dependency auf React 16 (ältere Versionen)
+- ❌ Manche Komponenten haben Breaking Changes zwischen Versionen
+
+**Installation:**
+```bash
+npm install @atlaskit/button @atlaskit/select @atlaskit/css-reset @atlaskit/spinner
+```
+
+**Wichtige AtlasKit Pakete:**
+```javascript
+// Basis
+import '@atlaskit/css-reset';              // CSS Reset (einmal im Entry Point)
+
+// Interaktive Komponenten
+import Button from '@atlaskit/button';      // Buttons
+import Select from '@atlaskit/select';      // Dropdowns/Selects
+import Textfield from '@atlaskit/textfield';// Text Inputs
+import Toggle from '@atlaskit/toggle';      // Toggle Switches
+
+// Feedback
+import Spinner from '@atlaskit/spinner';    // Loading Spinner
+import Banner from '@atlaskit/banner';      // Info/Warning Banners
+import Flag from '@atlaskit/flag';          // Toast Notifications
+
+// Layout & Navigation
+import Modal from '@atlaskit/modal-dialog'; // Modal Dialogs
+import Tabs from '@atlaskit/tabs';          // Tab Navigation
+import { DynamicTable } from '@atlaskit/dynamic-table'; // Data Tables
+
+// Design Tokens (für konsistente Farben/Spacing)
+import { token } from '@atlaskit/tokens';
+```
+
+### 2. Plain CSS / CSS Files ✅
+
+```css
+/* App.css - wird zur Build-Zeit kompiliert */
+.my-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 16px;
+}
+
+.my-button {
+    background: linear-gradient(135deg, #0052CC, #0747A6);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.my-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 82, 204, 0.4);
+}
+```
+
+```javascript
+import './App.css';
+
+function App() {
+    return (
+        <div className="my-card">
+            <button className="my-button">Click me</button>
+        </div>
+    );
+}
+```
+
+**Vorteile:**
+- ✅ Volle Kontrolle über Styling
+- ✅ Keine Dependencies
+- ✅ Beste Performance
+- ✅ Funktioniert garantiert
+- ✅ Alle CSS Features verfügbar (:hover, animations, media queries)
+
+**Nachteile:**
+- ❌ Kein Komponenten-System
+- ❌ Mehr manueller Code
+- ❌ Potenzielle CSS-Konflikte ohne Namespacing
+
+### 3. CSS Modules ✅
+
+```css
+/* App.module.css */
+.card {
+    background: white;
+    padding: 16px;
+}
+
+.button {
+    background: blue;
+    color: white;
+}
+
+.button:hover {
+    background: darkblue;
+}
+```
+
+```javascript
+import styles from './App.module.css';
+
+function App() {
+    return (
+        <div className={styles.card}>
+            <button className={styles.button}>Click</button>
+        </div>
+    );
+}
+```
+
+**Vorteile:**
+- ✅ Automatisches CSS Scoping (keine Konflikte)
+- ✅ Funktioniert mit create-react-app out-of-the-box
+- ✅ Typsicher mit TypeScript (generierte Typen)
+- ✅ Beste beider Welten: CSS Power + Scoping
+
+### 4. Inline Styles (React style prop) ✅
+
+```javascript
+function App() {
+    const cardStyle = {
+        backgroundColor: 'white',
+        padding: '16px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+    };
+
+    return (
+        <div style={cardStyle}>
+            Content
+        </div>
+    );
+}
+```
+
+**Vorteile:**
+- ✅ Volle dynamische Kontrolle
+- ✅ Keine Build-Konfiguration nötig
+- ✅ Gut für dynamische Werte (z.B. Progress Bars)
+
+**Nachteile:**
+- ❌ Keine Pseudo-Selektoren (:hover, :focus, :active)
+- ❌ Keine Media Queries
+- ❌ Keine Keyframe Animations
+- ❌ Verbose Code
+- ❌ Keine CSS-Wiederverwendung
+
+### 5. Tailwind CSS (mit korrekter Konfiguration) ⚠️
+
+Tailwind KANN funktionieren, WENN:
+- Alle Styles zur BUILD-Zeit extrahiert werden
+- Keine Runtime-JavaScript für Styles verwendet wird
+- JIT-Mode korrekt konfiguriert ist
+- Keine dynamischen Klassen zur Runtime generiert werden
+
+```javascript
+// Funktioniert (statische Klassen):
+<div className="bg-white p-4 rounded-lg shadow-md">
+    <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        Click
+    </button>
+</div>
+
+// FUNKTIONIERT NICHT (dynamische Klassen):
+<div className={`bg-${color}-500`}>  // ❌ Wird zur Runtime evaluiert
+```
+
+**Konfiguration für Forge:**
+```javascript
+// tailwind.config.js
+module.exports = {
+  content: ['./src/**/*.{js,jsx,ts,tsx}'],
+  // Safelist für dynamische Klassen die du brauchst
+  safelist: [
+    'bg-green-500',
+    'bg-yellow-500',
+    'bg-red-500',
+  ],
+}
+```
+
+---
+
+## 📊 Entscheidungsmatrix
+
+| Anforderung | AtlasKit | Plain CSS | CSS Modules | Tailwind |
+|-------------|:--------:|:---------:|:-----------:|:--------:|
+| Schnelle Entwicklung | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Customization | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Jira-Konsistenz | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ |
+| Wartbarkeit | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Bundle Size | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Setup-Komplexität | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ |
+| Dark Mode Support | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐⭐ |
+
+---
+
+## 🎨 Empfohlene Strategie: Hybrid-Ansatz
+
+### AtlasKit + Custom CSS
+
+```
+UI Layer für Service Lifecycle Tracker
+│
+├── AtlasKit für Standard-Komponenten
+│   ├── @atlaskit/button        → Buttons (Save, Cancel, etc.)
+│   ├── @atlaskit/select        → Filter Dropdowns
+│   ├── @atlaskit/textfield     → Search Input
+│   ├── @atlaskit/spinner       → Loading States
+│   ├── @atlaskit/modal-dialog  → Confirmation Dialogs
+│   ├── @atlaskit/toggle        → On/Off Switches
+│   └── @atlaskit/dynamic-table → Tabellarische Daten
+│
+├── Custom CSS für App-spezifische Komponenten
+│   ├── Pipeline-Visualisierung (Offer → Order Flow)
+│   ├── Gantt/Timeline Charts
+│   ├── Status Cards & Badges
+│   ├── Progress Indicators
+│   └── Customer Accordion Layout
+│
+└── Atlassian Design Tokens für Konsistenz
+    ├── Farben: var(--ds-text), var(--ds-background-neutral)
+    ├── Spacing: var(--ds-space-100), var(--ds-space-200)
+    └── Shadows: var(--ds-shadow-raised)
+```
+
+### Konkrete Beispiele
+
+#### AtlasKit für Filter-Bereich:
+```javascript
+import Select from '@atlaskit/select';
+import Textfield from '@atlaskit/textfield';
+
+function FilterSection() {
+    return (
+        <div className="filter-section">
+            <Textfield
+                placeholder="Suche..."
+                onChange={e => setSearch(e.target.value)}
+            />
+            <Select
+                options={statusOptions}
+                placeholder="Status"
+                onChange={setStatusFilter}
+            />
+        </div>
+    );
+}
+```
+
+#### Custom CSS für Pipeline:
+```css
+/* Pipeline.css */
+.pipeline-stages {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.pipeline-stage {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pipeline-stage.stage-green {
+    background: linear-gradient(135deg, #36B37E 0%, #00875A 100%);
+    color: white;
+}
+
+.pipeline-stage.stage-yellow {
+    background: linear-gradient(135deg, #FFAB00 0%, #FF991F 100%);
+    color: white;
+}
+
+.pipeline-stage:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+```
+
+#### Atlassian Design Tokens nutzen:
+```css
+/* Mit Design Tokens für Jira-Konsistenz */
+.my-card {
+    background: var(--ds-surface-raised, white);
+    color: var(--ds-text, #172B4D);
+    border-radius: var(--ds-border-radius, 3px);
+    box-shadow: var(--ds-shadow-raised, 0 1px 1px rgba(9,30,66,0.25));
+    padding: var(--ds-space-200, 16px);
+}
+
+.my-link {
+    color: var(--ds-link, #0052CC);
+}
+
+.my-link:hover {
+    color: var(--ds-link-pressed, #0065FF);
+}
+```
+
+---
+
+## 🔗 Nützliche Ressourcen
+
+### AtlasKit
+- [AtlasKit Komponenten](https://atlassian.design/components) - Offizielle Dokumentation
+- [AtlasKit Storybook](https://atlaskit.atlassian.com/) - Interaktive Beispiele
+- [Design Tokens](https://atlassian.design/foundations/design-tokens) - Farben, Spacing, etc.
+
+### Forge Custom UI
+- [Forge Custom UI Docs](https://developer.atlassian.com/platform/forge/custom-ui/)
+- [CSP in Forge](https://developer.atlassian.com/platform/forge/custom-ui-security/)
+- [Forge Bridge API](https://developer.atlassian.com/platform/forge/apis-reference/ui-api-bridge/)
+
+### Alternative CSS-in-JS (potenziell kompatibel - nicht getestet)
+- [Vanilla Extract](https://vanilla-extract.style/) - Zero-runtime CSS-in-JS (Build-Zeit)
+- [Linaria](https://linaria.dev/) - Zero-runtime CSS-in-JS
+- [Compiled](https://compiledcssinjs.com/) - Atlassian's eigenes CSS-in-JS (Build-Zeit)
+
+---
+
+## 📝 Lessons Learned aus dem Migration-Versuch
+
+### Was wir versucht haben (Branch: `feature/material-ui-migration`):
+
+1. **React 18 + MUI v7 installiert**
+   ```json
+   {
+     "@mui/material": "^7.3.9",
+     "@emotion/react": "^11.14.0",
+     "@emotion/styled": "^11.14.1",
+     "react": "^18.3.1"
+   }
+   ```
+
+2. **MUI Komponenten verwendet**
+   ```javascript
+   import { Box, Container, TextField, Select, ... } from '@mui/material';
+   ```
+
+3. **Build funktionierte** → Keine Fehler beim `npm run build`
+
+4. **Runtime in Forge: KOMPLETTES VERSAGEN**
+   - Keine Styles wurden angewendet
+   - Console voller CSP-Fehler
+   - App unbenutzbar
+
+### Warum der Build keine Warnung gab:
+- Webpack/Babel wissen nichts über die Runtime-Umgebung
+- Emotion's Code ist valides JavaScript
+- Der Fehler tritt erst zur **Runtime im Browser** auf
+- CSP-Validierung passiert nicht beim Build
+
+### Takeaway:
+> **"Funktioniert auf localhost" ≠ "Funktioniert in Forge"**
+>
+> Immer in der tatsächlichen Forge-Umgebung testen, bevor du Zeit in umfangreiche UI-Migrationen investierst!
+
+---
+
+## ✅ Fazit & Empfehlung
+
+**Material UI ist KEINE Option für Forge Custom UI Apps.**
+
+**Empfehlung für den Service Lifecycle Tracker:**
+
+1. ✅ **Behalte den Hybrid-Ansatz** (AtlasKit + Custom CSS)
+2. ✅ **Investiere in Custom CSS** für Pipeline-Visualisierung
+3. ✅ **Nutze AtlasKit** für Standard-UI (Buttons, Selects, Modals)
+4. ✅ **Verwende Design Tokens** für konsistente Farben/Spacing
+5. ✅ **Dokumentiere Custom Components** für Wiederverwendbarkeit
+
+Der aktuelle Code auf `feature/phase1-production-ready` folgt diesem Ansatz und ist der richtige Weg.
