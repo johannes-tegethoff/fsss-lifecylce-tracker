@@ -331,6 +331,45 @@
     font-weight: 500;
 }
 
+.team-filter {
+    background: #E3FCEF;
+    border-color: #36B37E;
+}
+
+/* === View Switcher === */
+.view-switcher {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    background: #F4F5F7;
+    border-radius: 8px;
+    padding: 4px;
+    width: fit-content;
+}
+
+.view-btn {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B778C;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.view-btn:hover {
+    color: #172B4D;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.view-btn.active {
+    background: white;
+    color: #0052CC;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 /* === Pipeline Legend === */
 .pipeline-legend {
     display: flex;
@@ -496,6 +535,16 @@
     font-weight: 500;
 }
 
+/* Team Badge */
+.unit-team {
+    background: linear-gradient(135deg, #36B37E 0%, #00875A 100%);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
 /* Legacy Link Warning Badge */
 .unit-legacy-badge {
     background: linear-gradient(135deg, #FFAB00 0%, #FF991F 100%);
@@ -629,20 +678,37 @@
     padding: 8px 0;
 }
 
-/* Stage Progress Bar */
+/* Stage Progress Bar - Epic Task Completion */
+.stage-progress-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
 .stage-progress {
-    height: 6px;
+    flex: 1;
+    height: 8px;
     background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
+    border-radius: 4px;
     overflow: hidden;
-    margin: 4px 0;
 }
 
 .progress-fill {
     height: 100%;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 4px;
     transition: width 0.3s;
+}
+
+.stage-tasks-count {
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0.9;
 }
 
 /* Stage Colors */

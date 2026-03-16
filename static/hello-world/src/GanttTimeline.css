@@ -1,0 +1,465 @@
+/**
+ * GanttTimeline Component Styles
+ * 
+ * Styling for the timeline/Gantt view with:
+ * - Header controls (scope, navigation)
+ * - Time axis headers
+ * - Service rows with milestone markers
+ */
+
+/* ========================================
+   CONTAINER & LAYOUT
+   ======================================== */
+
+.gantt-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+/* ========================================
+   HEADER & CONTROLS
+   ======================================== */
+
+.gantt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #0052CC 0%, #0747A6 100%);
+    color: white;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.gantt-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.gantt-title h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.gantt-range {
+    font-size: 14px;
+    opacity: 0.9;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 4px 12px;
+    border-radius: 4px;
+}
+
+.gantt-controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Scope Selector */
+.gantt-scope-selector {
+    display: flex;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.scope-btn {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.scope-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.scope-btn.active {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Navigation Buttons */
+.gantt-navigation {
+    display: flex;
+    gap: 8px;
+}
+
+.nav-btn {
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: transparent;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.nav-btn.today-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* ========================================
+   LEGEND
+   ======================================== */
+
+.gantt-legend {
+    display: flex;
+    gap: 20px;
+    padding: 12px 20px;
+    background: #F4F5F7;
+    border-bottom: 1px solid #DFE1E6;
+    flex-wrap: wrap;
+}
+
+.gantt-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #42526E;
+}
+
+.gantt-legend-marker {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+/* ========================================
+   TIMELINE GRID
+   ======================================== */
+
+.gantt-timeline {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+/* Time Headers */
+.gantt-time-header {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: white;
+    border-bottom: 2px solid #DFE1E6;
+}
+
+.gantt-label-column {
+    min-width: 200px;
+    max-width: 200px;
+    padding: 8px 12px;
+    background: #F4F5F7;
+    border-right: 1px solid #DFE1E6;
+    flex-shrink: 0;
+}
+
+.gantt-label-column.gantt-header-cell {
+    font-weight: 600;
+    font-size: 12px;
+    color: #6B778C;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+}
+
+.gantt-time-columns {
+    flex: 1;
+    min-width: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+.gantt-headers-main {
+    display: flex;
+    background: #EBECF0;
+    border-bottom: 1px solid #DFE1E6;
+}
+
+.gantt-header-main {
+    padding: 8px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #172B4D;
+    text-align: center;
+    border-right: 1px solid #DFE1E6;
+}
+
+.gantt-header-main:last-child {
+    border-right: none;
+}
+
+.gantt-headers-sub {
+    display: flex;
+    background: #F4F5F7;
+}
+
+.gantt-header-sub {
+    flex: 1;
+    padding: 6px 2px;
+    font-size: 11px;
+    color: #6B778C;
+    text-align: center;
+    border-right: 1px solid #EBECF0;
+    min-width: 30px;
+}
+
+.gantt-header-sub:last-child {
+    border-right: none;
+}
+
+.gantt-header-sub.weekend {
+    background: #FAFBFC;
+    color: #B3BAC5;
+}
+
+/* ========================================
+   TIMELINE ROWS
+   ======================================== */
+
+.gantt-rows {
+    min-height: 200px;
+}
+
+.gantt-row {
+    display: flex;
+    border-bottom: 1px solid #EBECF0;
+    transition: background 0.15s;
+}
+
+.gantt-row:hover {
+    background: #FAFBFC;
+}
+
+.gantt-row:last-child {
+    border-bottom: none;
+}
+
+/* Unit Info (Label Column) */
+.gantt-unit-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+}
+
+.gantt-unit-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #172B4D;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gantt-customer-name {
+    font-size: 11px;
+    color: #6B778C;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gantt-team-badge {
+    font-size: 10px;
+    color: #00875A;
+    background: #E3FCEF;
+    padding: 2px 6px;
+    border-radius: 3px;
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+/* Bar Container (Timeline Area) */
+.gantt-bar-container {
+    flex: 1;
+    min-width: 600px;
+    position: relative;
+    height: 60px;
+}
+
+/* Background Grid */
+.gantt-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+}
+
+.gantt-grid-cell {
+    flex: 1;
+    border-right: 1px solid #F4F5F7;
+}
+
+.gantt-grid-cell:last-child {
+    border-right: none;
+}
+
+.gantt-grid-cell.weekend {
+    background: #FAFBFC;
+}
+
+/* Today Line */
+.gantt-today-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #FF5630;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.gantt-today-line::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 10px;
+    height: 10px;
+    background: #FF5630;
+    border-radius: 50%;
+}
+
+/* Duration Bar (connects milestones) */
+.gantt-duration-bar {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 4px;
+    background: linear-gradient(90deg, #DFE1E6 0%, #C1C7D0 100%);
+    border-radius: 2px;
+    z-index: 1;
+}
+
+/* Milestone Markers */
+.gantt-milestone {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.gantt-milestone:hover {
+    transform: translate(-50%, -50%) scale(1.15);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    z-index: 4;
+}
+
+.gantt-milestone-icon {
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* ========================================
+   EMPTY STATE
+   ======================================== */
+
+.gantt-empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: #6B778C;
+    font-size: 14px;
+}
+
+/* ========================================
+   SUMMARY FOOTER
+   ======================================== */
+
+.gantt-summary {
+    padding: 12px 20px;
+    background: #F4F5F7;
+    border-top: 1px solid #DFE1E6;
+    font-size: 13px;
+    color: #6B778C;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 900px) {
+    .gantt-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .gantt-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .gantt-label-column {
+        min-width: 150px;
+        max-width: 150px;
+    }
+    
+    .gantt-unit-name {
+        font-size: 12px;
+    }
+    
+    .gantt-customer-name {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 600px) {
+    .gantt-scope-selector {
+        width: 100%;
+    }
+    
+    .scope-btn {
+        flex: 1;
+        padding: 10px 8px;
+    }
+    
+    .gantt-navigation {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .nav-btn {
+        flex: 1;
+        padding: 10px 8px;
+        font-size: 12px;
+    }
+    
+    .gantt-label-column {
+        min-width: 120px;
+        max-width: 120px;
+        padding: 6px 8px;
+    }
+    
+    .gantt-bar-container {
+        min-width: 400px;
+    }
+}

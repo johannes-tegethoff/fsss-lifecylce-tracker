@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { invoke, view } from '@forge/bridge';
 import './App.css';
+import GanttTimeline from './GanttTimeline';
 
 /**
  * Service Lifecycle Tracker - Pipeline View
@@ -15,10 +16,12 @@ function App() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [serviceFilter, setServiceFilter] = useState('all');
+    const [teamFilter, setTeamFilter] = useState('all');
     const [expandedCustomers, setExpandedCustomers] = useState(new Set());
     const [expandedEpics, setExpandedEpics] = useState(new Set());
     const [siteUrl, setSiteUrl] = useState('');
     const [sortBy, setSortBy] = useState('name'); // name, units, completion, overhaulDate
+    const [viewMode, setViewMode] = useState('pipeline'); // 'pipeline' | 'timeline'
 
     // Fetch lifecycle data and context on component mount
     useEffect(() => {
@@ -99,9 +102,27 @@ function App() {
         return Array.from(types).sort();
     };
 
-    // Filter units based on search, status, and service type
+    // Get unique teams for filter
+    // Teams are set on Offers and apply to the entire service lifecycle
+    const getTeams = () => {
+        if (!data?.customers) return [];
+        const teams = new Set();
+        data.customers.forEach(c => {
+            c.units.forEach(u => {
+                if (u.team) teams.add(u.team);
+            });
+        });
+        return Array.from(teams).sort();
+    };
+
+    // Filter units based on search, status, service type, and team
     const filterUnits = (units) => {
         return units.filter(unit => {
+            // Team filter - Team is set on Offer and applies to entire lifecycle
+            if (teamFilter !== 'all' && unit.team !== teamFilter) {
+                return false;
+            }
+            
             // Service type filter
             if (serviceFilter !== 'all' && unit.serviceType !== serviceFilter) {
                 return false;
@@ -121,7 +142,7 @@ function App() {
             
             // Search filter
             if (searchTerm) {
-                const searchText = `${unit.unitName} ${unit.serviceType} ${unit.offer?.key || ''} ${unit.order?.key || ''}`;
+                const searchText = `${unit.unitName} ${unit.serviceType} ${unit.offer?.key || ''} ${unit.order?.key || ''} ${unit.team || ''}`;
                 if (!fuzzyMatch(searchText, searchTerm)) {
                     return false;
                 }
@@ -278,17 +299,29 @@ function App() {
                                     {stage.key}
                                 </a>
                                 {type === 'epic' && stage.data && (
-                                    <div className="stage-progress">
-                                        <div 
-                                            className="progress-fill" 
-                                            style={{ width: `${stage.data.progress || 0}%` }}
-                                        />
+                                    <div className="stage-progress-container">
+                                        <div className="stage-progress">
+                                            <div 
+                                                className="progress-fill" 
+                                                style={{ width: `${stage.data.progress || 0}%` }}
+                                            />
+                                        </div>
+                                        <span className="stage-tasks-count">
+                                            {stage.data.doneTasks}/{stage.data.totalTasks}
+                                        </span>
                                     </div>
                                 )}
                                 <div className="stage-status">
-                                    {stageStatus.label}
-                                    {isEpic && stage.data && stage.data.tasks && stage.data.tasks.length > 0 && (
-                                        <span className="expand-icon">{isExpanded ? ' ▼' : ' ▶'}</span>
+                                    {/* For epics, show expand icon only; percentage is shown in progress bar */}
+                                    {isEpic && stage.data ? (
+                                        <>
+                                            {stage.data.progress >= 100 ? '✓ Fertig' : `${stage.data.progress}%`}
+                                            {stage.data.tasks && stage.data.tasks.length > 0 && (
+                                                <span className="expand-icon">{isExpanded ? ' ▼' : ' ▶'}</span>
+                                            )}
+                                        </>
+                                    ) : (
+                                        stageStatus.label
                                     )}
                                 </div>
                             </>
@@ -350,6 +383,12 @@ function App() {
                 <div className="unit-header">
                     <span className="unit-name">📦 {unit.unitName}</span>
                     <span className="unit-service">{unit.serviceType}</span>
+                    {/* Show team badge if team is assigned */}
+                    {unit.team && (
+                        <span className="unit-team" title="Zugewiesenes Team">
+                            👥 {unit.team}
+                        </span>
+                    )}
                     {/* Show warning badge if unit has legacy links that need migration */}
                     {unit.hasLegacyLinks && (
                         <span 
@@ -603,6 +642,7 @@ function App() {
     }
 
     const serviceTypes = getServiceTypes();
+    const teams = getTeams();
 
     return (
         <div className="app">
@@ -642,6 +682,16 @@ function App() {
                     ))}
                 </select>
                 <select 
+                    className="filter-select team-filter"
+                    value={teamFilter}
+                    onChange={(e) => setTeamFilter(e.target.value)}
+                >
+                    <option value="all">Alle Teams</option>
+                    {teams.map(team => (
+                        <option key={team} value={team}>{team}</option>
+                    ))}
+                </select>
+                <select 
                     className="filter-select sort-select"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
@@ -653,18 +703,48 @@ function App() {
                 </select>
             </div>
 
-            {/* Pipeline Legend */}
-            <div className="pipeline-legend">
-                <span className="legend-item"><span className="legend-dot dot-yellow"></span> Offen</span>
-                <span className="legend-item"><span className="legend-dot dot-orange"></span> In Arbeit</span>
-                <span className="legend-item"><span className="legend-dot dot-green"></span> Fertig</span>
-                <span className="legend-item"><span className="legend-dot dot-gray"></span> Nicht vorhanden</span>
+            {/* View Switcher */}
+            <div className="view-switcher">
+                <button 
+                    className={`view-btn ${viewMode === 'pipeline' ? 'active' : ''}`}
+                    onClick={() => setViewMode('pipeline')}
+                >
+                    📋 Pipeline
+                </button>
+                <button 
+                    className={`view-btn ${viewMode === 'timeline' ? 'active' : ''}`}
+                    onClick={() => setViewMode('timeline')}
+                >
+                    📊 Timeline
+                </button>
             </div>
 
-            {/* Customer List */}
-            <div className="customer-list">
-                {sortCustomers(data.customers).map(renderCustomer).filter(Boolean)}
-            </div>
+            {/* Conditional View Rendering */}
+            {viewMode === 'pipeline' ? (
+                <>
+                    {/* Pipeline Legend */}
+                    <div className="pipeline-legend">
+                        <span className="legend-item"><span className="legend-dot dot-yellow"></span> Offen</span>
+                        <span className="legend-item"><span className="legend-dot dot-orange"></span> In Arbeit</span>
+                        <span className="legend-item"><span className="legend-dot dot-green"></span> Fertig</span>
+                        <span className="legend-item"><span className="legend-dot dot-gray"></span> Nicht vorhanden</span>
+                    </div>
+
+                    {/* Customer List */}
+                    <div className="customer-list">
+                        {sortCustomers(data.customers).map(renderCustomer).filter(Boolean)}
+                    </div>
+                </>
+            ) : (
+                /* Timeline/Gantt View */
+                <GanttTimeline 
+                    data={data}
+                    siteUrl={siteUrl}
+                    teamFilter={teamFilter}
+                    serviceFilter={serviceFilter}
+                    searchTerm={searchTerm}
+                />
+            )}
         </div>
     );
 }

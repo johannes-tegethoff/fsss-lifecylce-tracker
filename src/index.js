@@ -59,6 +59,12 @@ const DATE_FIELDS = {
 };
 
 /**
+ * Custom Field ID for Team field
+ * This field is set on Offers and applies to the entire service lifecycle
+ */
+const TEAM_FIELD = 'customfield_10001';
+
+/**
  * Check if a date is within this week
  */
 function isThisWeek(dateStr) {
@@ -175,7 +181,8 @@ async function fetchOffersOrders(projectKey) {
             // Build query parameters - fields must be comma-separated for GET
             // Note: Do NOT use encodeURIComponent - the route template handles encoding
             // Include date fields: Stop of unit, Overhaul start/end, Start of commissioning
-            const fieldsParam = 'summary,issuetype,issuelinks,status,customfield_10245,customfield_10246,customfield_10147,customfield_10148,customfield_10149,customfield_10150';
+            // Include Team field (customfield_10001) for filtering
+const fieldsParam = 'summary,issuetype,issuelinks,status,customfield_10245,customfield_10246,customfield_10147,customfield_10148,customfield_10149,customfield_10150,customfield_10001';
             
             console.log(`[fetchOffersOrders] Using GET with jql: ${jql}`);
             
@@ -444,6 +451,24 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
             startOfCommissioning: f?.[DATE_FIELDS.startOfCommissioning] || null
         };
         
+        // Extract Team field - can be a string, object with name/value, or null
+        // Team is typically set on Offers and applies to the whole service lifecycle
+        const teamRaw = f?.[TEAM_FIELD];
+        let team = null;
+        if (teamRaw) {
+            // Handle different possible formats of the team field
+            if (typeof teamRaw === 'string') {
+                team = teamRaw;
+            } else if (teamRaw.name) {
+                team = teamRaw.name;
+            } else if (teamRaw.value) {
+                team = teamRaw.value;
+            } else if (Array.isArray(teamRaw) && teamRaw.length > 0) {
+                // Could be a multi-select, take first value
+                team = teamRaw[0]?.name || teamRaw[0]?.value || teamRaw[0];
+            }
+        }
+        
         // Process issue links using the new semantic link types
         // Priority: Specific link types > "Relates" fallback > Summary-based detection
         const links = f?.issuelinks || [];
@@ -587,6 +612,7 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
             status: f?.status?.name,
             parsed,
             dates,
+            team,  // Team assigned to this issue (primarily set on Offers)
             // New structured link data
             linkedOfferEpic,      // Epic via "Service Work Package" link
             linkedOrderEpic,      // Epic via "Contract Delivery" link  
@@ -640,6 +666,8 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
                 offerEpic: null,
                 order: null,
                 orderEpic: null,
+                // Team (inherited from Offer)
+                team: null,
                 // Dates (from any issue in this unit)
                 dates: {
                     stopOfUnit: null,
@@ -665,6 +693,11 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
                 status: issue.status,
                 summary: issue.summary
             };
+            
+            // Set team from Offer (this is where team is primarily assigned)
+            if (issue.team) {
+                unit.team = issue.team;
+            }
             
             // Offer-Epic: Prefer specific "Service Work Package" link over fallback
             if (issue.linkedOfferEpic) {
