@@ -1,6 +1,10 @@
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
-import { storage } from '@forge/kvs';
+import { kvs } from '@forge/kvs';
+
+// Create a storage wrapper that matches the expected API
+// @forge/kvs exports 'kvs' with get/set/delete methods
+const storage = kvs;
 
 // ============================================================================
 // CONFIGURATION
