@@ -1,7 +1,241 @@
 import Resolver from '@forge/resolver';
 import api, { route } from '@forge/api';
+import { storage } from '@forge/kvs';
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+/**
+ * Storage Keys for Forge Key-Value Storage
+ * These keys are used to persist app configuration.
+ */
+const STORAGE_KEYS = {
+    SETTINGS: 'app-settings',
+    ALLOWED_GROUPS: 'allowed-groups',
+    PROJECT_KEY: 'project-key'
+};
+
+/**
+ * Default settings used when no configuration exists yet.
+ * These are fallback values for first-time app usage.
+ */
+const DEFAULT_SETTINGS = {
+    allowedGroups: [],
+    restrictAccess: false,
+    projectKey: 'FSSS'
+};
+
+/**
+ * Maximum number of parallel API requests.
+ * Prevents overwhelming the Jira API and hitting rate limits.
+ */
+const MAX_PARALLEL_REQUESTS = 10;
+
+/**
+ * Regex pattern for valid Jira project keys.
+ * Must start with uppercase letter, followed by 1-9 uppercase letters/numbers.
+ */
+const PROJECT_KEY_PATTERN = /^[A-Z][A-Z0-9]{1,9}$/
 
 const resolver = new Resolver();
+
+// ============================================================================
+// VALIDATION & SECURITY UTILITIES
+// ============================================================================
+
+/**
+ * Validates a Jira project key format.
+ * Project keys must be uppercase alphanumeric, starting with a letter.
+ * 
+ * @param {string} projectKey - The project key to validate
+ * @returns {boolean} True if valid, false otherwise
+ */
+function isValidProjectKey(projectKey) {
+    if (!projectKey || typeof projectKey !== 'string') {
+        return false;
+    }
+    return PROJECT_KEY_PATTERN.test(projectKey);
+}
+
+/**
+ * Sanitizes a project key by converting to uppercase and trimming.
+ * Does NOT validate - call isValidProjectKey separately.
+ * 
+ * @param {string} projectKey - The project key to sanitize
+ * @returns {string} Sanitized project key
+ */
+function sanitizeProjectKey(projectKey) {
+    if (!projectKey || typeof projectKey !== 'string') {
+        return '';
+    }
+    return projectKey.trim().toUpperCase();
+}
+
+/**
+ * Checks if the current user is a member of any allowed group.
+ * Uses the Jira REST API to check group membership.
+ * 
+ * @param {string} accountId - The user's Atlassian account ID
+ * @returns {Promise<{allowed: boolean, groups: string[], error: string|null}>}
+ */
+async function checkUserGroupAccess(accountId) {
+    // Load settings from storage to check if access restriction is enabled
+    let settings;
+    try {
+        settings = await storage.get(STORAGE_KEYS.SETTINGS);
+    } catch (err) {
+        console.error('[checkUserGroupAccess] Error loading settings:', err);
+        settings = null;
+    }
+    
+    // If no settings or restriction disabled, allow all users
+    if (!settings || !settings.restrictAccess) {
+        console.log('[checkUserGroupAccess] Access restriction disabled, allowing access');
+        return { allowed: true, groups: [], error: null };
+    }
+    
+    const allowedGroups = settings.allowedGroups || [];
+    
+    // If restriction enabled but no groups configured, deny access (safety)
+    if (allowedGroups.length === 0) {
+        console.warn('[checkUserGroupAccess] Access restriction enabled but no groups configured!');
+        return { 
+            allowed: false, 
+            groups: [], 
+            error: 'Access restriction is enabled but no groups are configured. Please contact your administrator.' 
+        };
+    }
+    
+    if (!accountId) {
+        console.error('[checkUserGroupAccess] No accountId provided');
+        return { allowed: false, groups: [], error: 'User account ID not available' };
+    }
+    
+    try {
+        console.log(`[checkUserGroupAccess] Checking groups for user: ${accountId}`);
+        
+        // Fetch user's group memberships
+        const response = await api.asUser().requestJira(
+            route`/rest/api/3/user/groups?accountId=${accountId}`
+        );
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[checkUserGroupAccess] API error: ${response.status} - ${errorText}`);
+            
+            // Handle specific error codes
+            if (response.status === 403) {
+                return { allowed: false, groups: [], error: 'Insufficient permissions to check group membership' };
+            }
+            if (response.status === 404) {
+                return { allowed: false, groups: [], error: 'User not found' };
+            }
+            return { allowed: false, groups: [], error: `Failed to check groups: ${response.status}` };
+        }
+        
+        const userGroups = await response.json();
+        const userGroupNames = userGroups.map(g => g.name);
+        
+        console.log(`[checkUserGroupAccess] User groups: ${userGroupNames.join(', ')}`);
+        
+        // Check if user is in any allowed group
+        const matchingGroups = userGroupNames.filter(g => allowedGroups.includes(g));
+        const isAllowed = matchingGroups.length > 0;
+        
+        console.log(`[checkUserGroupAccess] Access ${isAllowed ? 'GRANTED' : 'DENIED'} - Matching groups: ${matchingGroups.join(', ')}`);
+        
+        return {
+            allowed: isAllowed,
+            groups: userGroupNames,
+            matchingGroups,
+            allowedGroups,
+            error: isAllowed ? null : 'User is not a member of any authorized group'
+        };
+    } catch (error) {
+        console.error('[checkUserGroupAccess] Exception:', error);
+        return { allowed: false, groups: [], error: `Group check failed: ${error.message}` };
+    }
+}
+
+/**
+ * Processes a Jira API response and returns a standardized result.
+ * Handles common HTTP status codes with user-friendly messages.
+ * 
+ * @param {Response} response - Fetch API response object
+ * @param {string} context - Description of the operation for error messages
+ * @returns {Promise<{ok: boolean, data: any, error: string|null, status: number}>}
+ */
+async function processApiResponse(response, context = 'API request') {
+    const status = response.status;
+    
+    if (response.ok) {
+        try {
+            const data = await response.json();
+            return { ok: true, data, error: null, status };
+        } catch (parseError) {
+            // Some successful responses may not have JSON body
+            return { ok: true, data: null, error: null, status };
+        }
+    }
+    
+    // Handle error responses
+    let errorMessage;
+    try {
+        const errorBody = await response.json();
+        errorMessage = errorBody.message || errorBody.errorMessages?.[0] || JSON.stringify(errorBody);
+    } catch {
+        errorMessage = await response.text().catch(() => 'Unknown error');
+    }
+    
+    // User-friendly messages for common status codes
+    switch (status) {
+        case 400:
+            return { ok: false, data: null, error: `Invalid request: ${errorMessage}`, status };
+        case 401:
+            return { ok: false, data: null, error: 'Authentication required. Please log in again.', status };
+        case 403:
+            return { ok: false, data: null, error: `Access denied: ${errorMessage}. You may not have permission to view this data.`, status };
+        case 404:
+            return { ok: false, data: null, error: `${context} not found. It may have been deleted or moved.`, status };
+        case 429:
+            return { ok: false, data: null, error: 'Too many requests. Please wait a moment and try again.', status };
+        case 500:
+        case 502:
+        case 503:
+            return { ok: false, data: null, error: 'Jira server error. Please try again later.', status };
+        default:
+            return { ok: false, data: null, error: `${context} failed: ${errorMessage} (${status})`, status };
+    }
+}
+
+/**
+ * Executes an array of async functions in batches to limit parallelism.
+ * Prevents overwhelming APIs with too many concurrent requests.
+ * 
+ * @param {Array<Function>} tasks - Array of async functions to execute
+ * @param {number} batchSize - Maximum concurrent tasks (default: MAX_PARALLEL_REQUESTS)
+ * @returns {Promise<Array>} Array of results in the same order as tasks
+ */
+async function executeBatched(tasks, batchSize = MAX_PARALLEL_REQUESTS) {
+    const results = [];
+    
+    for (let i = 0; i < tasks.length; i += batchSize) {
+        const batch = tasks.slice(i, i + batchSize);
+        console.log(`[executeBatched] Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(tasks.length / batchSize)} (${batch.length} tasks)`);
+        
+        const batchResults = await Promise.all(
+            batch.map(task => task().catch(error => {
+                console.error('[executeBatched] Task error:', error);
+                return { error: error.message };
+            }))
+        );
+        
+        results.push(...batchResults);
+    }
+    
+    return results;
+}
 
 /**
  * Known ServiceType values (used for parsing from the end of summary)
@@ -164,6 +398,11 @@ function parseSummary(summary) {
 async function fetchOffersOrders(projectKey) {
     console.log(`[fetchOffersOrders] Fetching from project: ${projectKey}`);
     
+    // Validate project key before using in JQL
+    if (!isValidProjectKey(projectKey)) {
+        throw new Error(`Invalid project key format: ${projectKey}`);
+    }
+    
     // First, try to fetch with the specific issue types
     // Note: "Offer" and "Order" must be quoted in JQL as they may be reserved words
     // Removed "Service Request" as it doesn't exist in this project
@@ -190,14 +429,18 @@ const fieldsParam = 'summary,issuetype,issuelinks,status,customfield_10245,custo
                 route`/rest/api/3/search/jql?jql=${jql}&fields=${fieldsParam}&startAt=${startAt}&maxResults=${maxResults}`
             );
             
-            const data = await response.json();
-            console.log(`[fetchOffersOrders] API Response status: ${response.status}`);
-            console.log(`[fetchOffersOrders] Response data:`, JSON.stringify(data).substring(0, 1000));
+            // Use standardized response processing
+            const result = await processApiResponse(response, `Search for issues in ${projectKey}`);
             
-            // Check for error response
-            if (!response.ok) {
-                console.error(`[fetchOffersOrders] API Error:`, JSON.stringify(data));
+            console.log(`[fetchOffersOrders] API Response status: ${response.status}`);
+            
+            if (!result.ok) {
+                console.error(`[fetchOffersOrders] API Error:`, result.error);
+                throw new Error(result.error);
             }
+            
+            const data = result.data;
+            console.log(`[fetchOffersOrders] Response data:`, JSON.stringify(data).substring(0, 1000));
             
             if (!data.issues || data.issues.length === 0) {
                 console.log(`[fetchOffersOrders] No more issues found. Total fetched: ${allIssues.length}`);
@@ -411,7 +654,8 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
     // This significantly speeds up the loading time
     console.log(`[buildCustomerLifecycleData] Using summary parsing instead of Asset lookups`);
     
-    // Step 6: Fetch all linked Epics (collect unique keys first, then fetch in parallel)
+    // Step 6: Fetch all linked Epics (collect unique keys first, then fetch in BATCHES)
+    // Using batched execution to prevent overwhelming the API and avoid timeouts
     console.log(`[buildCustomerLifecycleData] Fetching Epic details`);
     const epicKeys = new Set();
     for (const issue of allIssues) {
@@ -426,11 +670,19 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
     console.log(`[buildCustomerLifecycleData] Found ${epicKeys.size} unique epics to fetch`);
     
     const epicCache = {};
-    const epicPromises = Array.from(epicKeys).map(async (epicKey) => {
+    
+    // Create task functions for batched execution
+    const epicTasks = Array.from(epicKeys).map(epicKey => async () => {
         const epicData = await fetchEpicWithTasks(epicKey);
-        if (epicData) epicCache[epicKey] = epicData;
+        if (epicData) {
+            epicCache[epicKey] = epicData;
+        }
+        return epicData;
     });
-    await Promise.all(epicPromises);
+    
+    // Execute in batches of MAX_PARALLEL_REQUESTS to avoid rate limiting
+    await executeBatched(epicTasks, MAX_PARALLEL_REQUESTS);
+    console.log(`[buildCustomerLifecycleData] Successfully fetched ${Object.keys(epicCache).length} epics`);
     
     // Step 7: Build grouped data structure with Pipeline logic
     // Group by Customer -> Unit -> Pipeline (Offer -> Offer-Epic -> Order -> Order-Epic)
@@ -894,10 +1146,56 @@ async function buildCustomerLifecycleData(projectKey, cloudId) {
  * Main resolver: Fetch lifecycle data
  */
 resolver.define('getLifecycleData', async (req) => {
-    console.log('[getLifecycleData] Request received:', req);
+    console.log('[getLifecycleData] Request received');
     
     try {
-        const projectKey = req.payload?.projectKey || 'FSSS';
+        // =====================================================================
+        // STEP 1: Access Control - Check if user is in allowed group
+        // =====================================================================
+        const accountId = req.context.accountId;
+        console.log(`[getLifecycleData] User accountId: ${accountId}`);
+        
+        const accessCheck = await checkUserGroupAccess(accountId);
+        if (!accessCheck.allowed) {
+            console.warn(`[getLifecycleData] Access denied for user ${accountId}: ${accessCheck.error}`);
+            return {
+                error: accessCheck.error,
+                errorType: 'ACCESS_DENIED',
+                allowedGroups: accessCheck.allowedGroups || [],
+                userGroups: accessCheck.groups,
+                summary: { totalCustomers: 0, openOffers: 0, openOrders: 0, avgProgress: 0 },
+                customers: [],
+                noCustomer: []
+            };
+        }
+        
+        // =====================================================================
+        // STEP 2: Load Settings & Input Validation
+        // =====================================================================
+        // Load project key from settings, with fallback to payload or default
+        let settings;
+        try {
+            settings = await storage.get(STORAGE_KEYS.SETTINGS);
+        } catch (err) {
+            console.warn('[getLifecycleData] Could not load settings:', err);
+            settings = null;
+        }
+        
+        const configuredProjectKey = settings?.projectKey || DEFAULT_SETTINGS.projectKey;
+        let projectKey = sanitizeProjectKey(req.payload?.projectKey || configuredProjectKey);
+        
+        if (!isValidProjectKey(projectKey)) {
+            console.error(`[getLifecycleData] Invalid project key: ${projectKey}`);
+            return {
+                error: `Invalid project key format: "${projectKey}". Project keys must be uppercase alphanumeric (e.g., "FSSS", "PROJ1").`,
+                errorType: 'INVALID_INPUT',
+                summary: { totalCustomers: 0, openOffers: 0, openOrders: 0, avgProgress: 0 },
+                customers: [],
+                noCustomer: []
+            };
+        }
+        
+        console.log(`[getLifecycleData] Validated project key: ${projectKey}`);
         
         // Get cloud ID from context
         const cloudId = req.context.cloudId;
@@ -959,12 +1257,153 @@ resolver.define('getLifecycleData', async (req) => {
         };
     } catch (error) {
         console.error('[getLifecycleData] Error:', error);
+        console.error('[getLifecycleData] Stack:', error.stack);
+        
+        // Provide more context based on error type
+        let errorType = 'UNKNOWN_ERROR';
+        let userMessage = error.message;
+        
+        if (error.message.includes('403') || error.message.includes('Access denied')) {
+            errorType = 'ACCESS_DENIED';
+            userMessage = 'You do not have permission to access this project. Please contact your Jira administrator.';
+        } else if (error.message.includes('404') || error.message.includes('not found')) {
+            errorType = 'NOT_FOUND';
+            userMessage = 'The requested project or data could not be found. It may have been deleted or moved.';
+        } else if (error.message.includes('429') || error.message.includes('rate limit')) {
+            errorType = 'RATE_LIMITED';
+            userMessage = 'Too many requests. Please wait a moment and try again.';
+        } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+            errorType = 'TIMEOUT';
+            userMessage = 'The request timed out. Please try again or contact support if the issue persists.';
+        }
+        
         return {
-            error: error.message,
+            error: userMessage,
+            errorType,
+            errorDetails: process.env.NODE_ENV === 'development' ? error.stack : undefined,
             summary: { totalCustomers: 0, openOffers: 0, openOrders: 0, avgProgress: 0 },
             customers: [],
             noCustomer: []
         };
+    }
+});
+
+// =============================================================================
+// ADMIN SETTINGS RESOLVERS
+// =============================================================================
+
+/**
+ * Get current app settings from Forge Storage
+ * Used by the admin page to display current configuration.
+ */
+resolver.define('getSettings', async (req) => {
+    console.log('[getSettings] Loading settings');
+    
+    try {
+        const settings = await storage.get(STORAGE_KEYS.SETTINGS);
+        
+        if (!settings) {
+            console.log('[getSettings] No settings found, returning defaults');
+            return DEFAULT_SETTINGS;
+        }
+        
+        console.log('[getSettings] Settings loaded:', settings);
+        return settings;
+    } catch (error) {
+        console.error('[getSettings] Error:', error);
+        return {
+            error: error.message,
+            ...DEFAULT_SETTINGS
+        };
+    }
+});
+
+/**
+ * Save app settings to Forge Storage
+ * Used by the admin page to persist configuration changes.
+ */
+resolver.define('saveSettings', async (req) => {
+    console.log('[saveSettings] Saving settings:', req.payload);
+    
+    try {
+        const { settings } = req.payload;
+        
+        // Validate settings structure
+        if (!settings || typeof settings !== 'object') {
+            return { error: 'Invalid settings format' };
+        }
+        
+        // Validate project key if provided
+        if (settings.projectKey) {
+            const sanitizedKey = sanitizeProjectKey(settings.projectKey);
+            if (!isValidProjectKey(sanitizedKey)) {
+                return { error: `Invalid project key format: "${settings.projectKey}"` };
+            }
+            settings.projectKey = sanitizedKey;
+        }
+        
+        // Validate allowedGroups is an array
+        if (settings.allowedGroups && !Array.isArray(settings.allowedGroups)) {
+            return { error: 'allowedGroups must be an array' };
+        }
+        
+        // Sanitize group names (trim whitespace)
+        if (settings.allowedGroups) {
+            settings.allowedGroups = settings.allowedGroups
+                .map(g => typeof g === 'string' ? g.trim() : '')
+                .filter(g => g.length > 0);
+        }
+        
+        // Build final settings object with defaults for missing fields
+        const finalSettings = {
+            allowedGroups: settings.allowedGroups || DEFAULT_SETTINGS.allowedGroups,
+            restrictAccess: Boolean(settings.restrictAccess),
+            projectKey: settings.projectKey || DEFAULT_SETTINGS.projectKey,
+            updatedAt: new Date().toISOString()
+        };
+        
+        // Save to storage
+        await storage.set(STORAGE_KEYS.SETTINGS, finalSettings);
+        
+        console.log('[saveSettings] Settings saved successfully:', finalSettings);
+        return { success: true, settings: finalSettings };
+    } catch (error) {
+        console.error('[saveSettings] Error:', error);
+        return { error: error.message };
+    }
+});
+
+/**
+ * Get available Jira groups for selection in admin UI
+ * Returns a list of groups that can be added to the allowed groups list.
+ */
+resolver.define('getAvailableGroups', async (req) => {
+    console.log('[getAvailableGroups] Fetching groups');
+    
+    try {
+        // Fetch groups from Jira using the bulk get endpoint
+        // This returns groups the current user can see
+        const response = await api.asUser().requestJira(
+            route`/rest/api/3/groups/picker?maxResults=50`
+        );
+        
+        const result = await processApiResponse(response, 'Fetch groups');
+        
+        if (!result.ok) {
+            console.error('[getAvailableGroups] API error:', result.error);
+            return { error: result.error, groups: [] };
+        }
+        
+        const groups = (result.data.groups || []).map(g => ({
+            name: g.name,
+            html: g.html || g.name
+        }));
+        
+        console.log(`[getAvailableGroups] Found ${groups.length} groups`);
+        return { groups };
+    } catch (error) {
+        console.error('[getAvailableGroups] Error:', error);
+        return { error: error.message, groups: [] };
     }
 });
 

@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { invoke, view } from '@forge/bridge';
 import './App.css';
 import GanttTimeline from './GanttTimeline';
+import ErrorBoundary from './ErrorBoundary';
 
 /**
  * Service Lifecycle Tracker - Pipeline View
@@ -9,10 +10,29 @@ import GanttTimeline from './GanttTimeline';
  * Displays a customer-grouped pipeline view showing:
  * Offer → Offer-Epic → Order → Order-Epic
  */
-function App() {
+/**
+ * Error type constants matching backend errorType values.
+ * Used to display appropriate UI and recovery options.
+ */
+const ERROR_TYPES = {
+    ACCESS_DENIED: 'ACCESS_DENIED',
+    INVALID_INPUT: 'INVALID_INPUT',
+    NOT_FOUND: 'NOT_FOUND',
+    RATE_LIMITED: 'RATE_LIMITED',
+    TIMEOUT: 'TIMEOUT',
+    UNKNOWN_ERROR: 'UNKNOWN_ERROR'
+};
+
+/**
+ * Main App Component
+ * Wrapped in ErrorBoundary for graceful error handling.
+ */
+function AppContent() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [errorType, setErrorType] = useState(null);
+    const [errorDetails, setErrorDetails] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [serviceFilter, setServiceFilter] = useState('all');
@@ -22,37 +42,76 @@ function App() {
     const [siteUrl, setSiteUrl] = useState('');
     const [sortBy, setSortBy] = useState('name'); // name, units, completion, overhaulDate
     const [viewMode, setViewMode] = useState('pipeline'); // 'pipeline' | 'timeline'
+    const [retryCount, setRetryCount] = useState(0);
 
-    // Fetch lifecycle data and context on component mount
-    useEffect(() => {
+    /**
+     * Fetch lifecycle data from the backend resolver.
+     * Handles various error types and sets appropriate state.
+     */
+    const fetchData = useCallback(async () => {
         setLoading(true);
+        setError(null);
+        setErrorType(null);
+        setErrorDetails(null);
         
-        // Get site URL from Forge context
-        view.getContext().then(context => {
+        try {
+            // Get site URL from Forge context
+            const context = await view.getContext();
             if (context.siteUrl) {
                 setSiteUrl(context.siteUrl);
             }
-        }).catch(err => {
-            console.error('Error getting context:', err);
-        });
-        
-        invoke('getLifecycleData', { projectKey: 'FSSS' })
-            .then(result => {
-                console.log('Lifecycle data received:', result);
+            
+            console.log('[App] Fetching lifecycle data...');
+            const result = await invoke('getLifecycleData', { projectKey: 'FSSS' });
+            console.log('[App] Lifecycle data received:', result);
+            
+            // Check if the result contains an error from the backend
+            if (result.error) {
+                console.warn('[App] Backend returned error:', result.error);
+                setError(result.error);
+                setErrorType(result.errorType || ERROR_TYPES.UNKNOWN_ERROR);
+                setErrorDetails(result.errorDetails || null);
+                
+                // Still set partial data if available (for non-critical errors)
+                if (result.customers && result.customers.length > 0) {
+                    setData(result);
+                } else {
+                    setData(null);
+                }
+            } else {
                 setData(result);
-                // Auto-expand first 3 customers
+                setError(null);
+                setErrorType(null);
+                
+                // Auto-expand first 3 customers on successful load
                 if (result.customers) {
                     const firstThree = new Set(result.customers.slice(0, 3).map(c => c.customer.id));
                     setExpandedCustomers(firstThree);
                 }
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error('Error fetching lifecycle data:', err);
-                setError(err.message || 'Failed to load data');
-                setLoading(false);
-            });
+            }
+        } catch (err) {
+            console.error('[App] Error fetching lifecycle data:', err);
+            setError(err.message || 'Ein unerwarteter Fehler ist aufgetreten');
+            setErrorType(ERROR_TYPES.UNKNOWN_ERROR);
+            setData(null);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    /**
+     * Retry fetching data after an error.
+     * Increments retry count for tracking.
+     */
+    const handleRetry = useCallback(() => {
+        setRetryCount(prev => prev + 1);
+        fetchData();
+    }, [fetchData]);
+
+    // Fetch data on component mount and when retry is triggered
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     // Toggle customer expansion
     const toggleCustomer = (customerId) => {
@@ -629,13 +688,12 @@ function App() {
         );
     }
 
-    // Error state
-    if (error) {
+    // Error state with detailed error UI based on error type
+    if (error && !data) {
         return (
             <div className="app">
-                <div className="error">
-                    <h2>❌ Error Loading Data</h2>
-                    <p>{error}</p>
+                <div className="error-container">
+                    {renderErrorUI(error, errorType, errorDetails, handleRetry, retryCount)}
                 </div>
             </div>
         );
@@ -746,6 +804,166 @@ function App() {
                 />
             )}
         </div>
+    );
+}
+
+/**
+ * Render appropriate error UI based on error type.
+ * Provides specific guidance and recovery options for each error type.
+ * 
+ * @param {string} error - Error message to display
+ * @param {string} errorType - Type of error (from ERROR_TYPES)
+ * @param {string|null} errorDetails - Additional error details (dev only)
+ * @param {function} onRetry - Callback function to retry the operation
+ * @param {number} retryCount - Number of retry attempts made
+ * @returns {JSX.Element} Error UI component
+ */
+function renderErrorUI(error, errorType, errorDetails, onRetry, retryCount) {
+    // Determine icon, title, and additional guidance based on error type
+    let icon = '❌';
+    let title = 'Fehler beim Laden der Daten';
+    let guidance = null;
+    let showRetry = true;
+    let showContactAdmin = false;
+    
+    switch (errorType) {
+        case ERROR_TYPES.ACCESS_DENIED:
+            icon = '🔒';
+            title = 'Zugriff verweigert';
+            guidance = (
+                <div className="error-guidance">
+                    <p>Sie sind nicht berechtigt, diese App zu verwenden.</p>
+                    <p>Bitte kontaktieren Sie Ihren Jira-Administrator, um Zugriff zu erhalten.</p>
+                </div>
+            );
+            showRetry = false;
+            showContactAdmin = true;
+            break;
+            
+        case ERROR_TYPES.INVALID_INPUT:
+            icon = '⚠️';
+            title = 'Ungültige Eingabe';
+            guidance = (
+                <div className="error-guidance">
+                    <p>Die Anfrage enthält ungültige Daten.</p>
+                </div>
+            );
+            showRetry = false;
+            break;
+            
+        case ERROR_TYPES.NOT_FOUND:
+            icon = '🔍';
+            title = 'Nicht gefunden';
+            guidance = (
+                <div className="error-guidance">
+                    <p>Das angeforderte Projekt oder die Daten wurden nicht gefunden.</p>
+                    <p>Möglicherweise wurde das Projekt gelöscht oder verschoben.</p>
+                </div>
+            );
+            showContactAdmin = true;
+            break;
+            
+        case ERROR_TYPES.RATE_LIMITED:
+            icon = '⏳';
+            title = 'Zu viele Anfragen';
+            guidance = (
+                <div className="error-guidance">
+                    <p>Sie haben zu viele Anfragen in kurzer Zeit gesendet.</p>
+                    <p>Bitte warten Sie einen Moment und versuchen Sie es erneut.</p>
+                </div>
+            );
+            break;
+            
+        case ERROR_TYPES.TIMEOUT:
+            icon = '⏱️';
+            title = 'Zeitüberschreitung';
+            guidance = (
+                <div className="error-guidance">
+                    <p>Die Anfrage hat zu lange gedauert.</p>
+                    <p>Dies kann bei großen Datenmengen passieren. Bitte versuchen Sie es erneut.</p>
+                </div>
+            );
+            break;
+            
+        default:
+            guidance = (
+                <div className="error-guidance">
+                    <p>Ein unerwarteter Fehler ist aufgetreten.</p>
+                </div>
+            );
+            showContactAdmin = true;
+    }
+    
+    return (
+        <div className="error-card">
+            <div className="error-icon">{icon}</div>
+            <h2 className="error-title">{title}</h2>
+            <p className="error-message">{error}</p>
+            
+            {guidance}
+            
+            {/* Show retry count if user has retried */}
+            {retryCount > 0 && (
+                <p className="error-retry-count">
+                    Versuche: {retryCount}
+                </p>
+            )}
+            
+            {/* Error details (development mode) */}
+            {errorDetails && (
+                <details className="error-details">
+                    <summary>Technische Details</summary>
+                    <pre>{errorDetails}</pre>
+                </details>
+            )}
+            
+            <div className="error-actions">
+                {showRetry && (
+                    <button 
+                        className="error-btn primary"
+                        onClick={onRetry}
+                    >
+                        🔄 Erneut versuchen
+                    </button>
+                )}
+                
+                <button 
+                    className="error-btn secondary"
+                    onClick={() => window.location.reload()}
+                >
+                    Seite neu laden
+                </button>
+                
+                {showContactAdmin && (
+                    <p className="error-admin-hint">
+                        Wenn das Problem weiterhin besteht, kontaktieren Sie den Jira-Administrator.
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * App Component wrapped with ErrorBoundary.
+ * The ErrorBoundary catches any unhandled errors in the component tree
+ * and displays a fallback UI instead of crashing the entire app.
+ */
+function App() {
+    return (
+        <ErrorBoundary
+            onError={(error, errorInfo) => {
+                // Log errors for debugging/monitoring
+                console.error('[App ErrorBoundary] Caught error:', error);
+                console.error('[App ErrorBoundary] Component stack:', errorInfo.componentStack);
+            }}
+            onReset={() => {
+                // Clear any cached state when user clicks "Try Again"
+                console.log('[App ErrorBoundary] User triggered reset');
+            }}
+        >
+            <AppContent />
+        </ErrorBoundary>
     );
 }
 

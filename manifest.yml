@@ -5,17 +5,27 @@ modules:
       resolver:
         function: resolver
       title: Service Lifecycle Tracker
+  jira:adminPage:
+    - key: service-lifecycle-admin
+      resource: admin
+      resolver:
+        function: resolver
+      title: Service Lifecycle Settings
   function:
     - key: resolver
       handler: index.handler
 resources:
   - key: main
     path: static/hello-world/build
+  - key: admin
+    path: static/admin/build
 permissions:
   scopes:
     - read:jira-work
     - read:jira-user
     - read:servicedesk-request
+    - read:group:jira  # Required for checking user group membership (access control)
+    - storage:app      # Required for storing app configuration (allowed groups, field mappings)
   external:
     fetch:
       backend:

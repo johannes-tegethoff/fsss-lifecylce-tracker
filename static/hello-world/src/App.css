@@ -48,6 +48,199 @@
     margin-bottom: 12px;
 }
 
+/* === Enhanced Error UI === */
+.error-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: 20px;
+}
+
+.error-card {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    text-align: center;
+}
+
+.error-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+    line-height: 1;
+}
+
+.error-title {
+    margin: 0 0 12px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #172B4D;
+}
+
+.error-message {
+    margin: 0 0 20px 0;
+    font-size: 15px;
+    color: #6B778C;
+    line-height: 1.5;
+    padding: 12px 16px;
+    background: #F4F5F7;
+    border-radius: 6px;
+    border-left: 4px solid #DE350B;
+}
+
+.error-guidance {
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+.error-guidance p {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #42526E;
+    line-height: 1.5;
+}
+
+.error-guidance p:last-child {
+    margin-bottom: 0;
+}
+
+.error-retry-count {
+    font-size: 12px;
+    color: #6B778C;
+    margin-bottom: 16px;
+}
+
+.error-details {
+    text-align: left;
+    margin-bottom: 24px;
+    background: #FFEBE6;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.error-details summary {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #BF2600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.error-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.error-details pre {
+    margin: 0;
+    padding: 12px 14px;
+    font-size: 11px;
+    color: #6B778C;
+    background: rgba(255, 255, 255, 0.5);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.error-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+
+.error-btn {
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 180px;
+}
+
+.error-btn.primary {
+    background: linear-gradient(135deg, #0052CC 0%, #0747A6 100%);
+    color: white;
+    border: none;
+}
+
+.error-btn.primary:hover {
+    background: linear-gradient(135deg, #0065FF 0%, #0052CC 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 82, 204, 0.3);
+}
+
+.error-btn.secondary {
+    background: #F4F5F7;
+    color: #42526E;
+    border: 1px solid #DFE1E6;
+}
+
+.error-btn.secondary:hover {
+    background: #EBECF0;
+    border-color: #C1C7D0;
+}
+
+.error-admin-hint {
+    margin: 16px 0 0 0;
+    font-size: 12px;
+    color: #6B778C;
+    font-style: italic;
+}
+
+/* Warning banner for non-critical errors (shown with data) */
+.warning-banner {
+    background: linear-gradient(135deg, #FFFAE6 0%, #FFF0B3 100%);
+    border: 1px solid #FFE380;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.warning-banner-icon {
+    font-size: 24px;
+}
+
+.warning-banner-content {
+    flex: 1;
+}
+
+.warning-banner-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #172B4D;
+    margin: 0 0 4px 0;
+}
+
+.warning-banner-message {
+    font-size: 13px;
+    color: #6B778C;
+    margin: 0;
+}
+
+.warning-banner-dismiss {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    color: #6B778C;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+}
+
+.warning-banner-dismiss:hover {
+    color: #172B4D;
+}
+
 /* === Upcoming Events === */
 .upcoming-container {
     display: grid;
