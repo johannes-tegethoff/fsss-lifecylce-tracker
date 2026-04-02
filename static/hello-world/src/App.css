@@ -803,6 +803,23 @@
     font-weight: 600;
 }
 
+/* Asset Data Indicator */
+.unit-name.has-asset-data {
+    color: #006644;
+}
+
+.asset-badge {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 10px;
+    color: #36B37E;
+    background: #E3FCEF;
+    padding: 1px 5px;
+    border-radius: 8px;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
 /* Legacy Link Warning Badge */
 .unit-legacy-badge {
     background: linear-gradient(135deg, #FFAB00 0%, #FF991F 100%);

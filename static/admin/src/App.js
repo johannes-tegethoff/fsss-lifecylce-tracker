@@ -18,11 +18,16 @@ import './App.css';
  * Can be overridden for other Jira instances.
  */
 const DEFAULT_FIELD_MAPPINGS = {
+    // Date fields
     stopOfUnit: 'customfield_10147',
     overhaulStart: 'customfield_10148',
     overhaulEnd: 'customfield_10149',
     startOfCommissioning: 'customfield_10150',
-    team: 'customfield_10001'
+    // Team field
+    team: 'customfield_10001',
+    // Asset reference fields (JSM Assets)
+    customerAsset: 'customfield_10246',
+    unitAsset: 'customfield_10245'
 };
 function App() {
     // =========================================================================
@@ -559,6 +564,53 @@ function App() {
                                 'Das Feld, das das zuständige Team enthält.',
                                 availableFields.teamFields.length > 0 ? availableFields.teamFields : availableFields.all
                             )}
+                            
+                            <h3>🏢 Asset-Felder (JSM Assets)</h3>
+                            <p className="section-note">
+                                Diese Felder verknüpfen Issues mit JSM Assets für Kunden- und Unit-Daten.
+                            </p>
+                            
+                            {renderFieldSelector(
+                                'Customer Asset',
+                                'customerAsset',
+                                'Das Asset-Feld, das den Kunden referenziert.',
+                                availableFields.all.filter(f => 
+                                    f.type === 'array' || 
+                                    f.customType?.includes('assets') ||
+                                    f.customType?.includes('cmdb') ||
+                                    f.name?.toLowerCase().includes('customer') ||
+                                    f.name?.toLowerCase().includes('asset')
+                                ).length > 0 
+                                    ? availableFields.all.filter(f => 
+                                        f.type === 'array' || 
+                                        f.customType?.includes('assets') ||
+                                        f.customType?.includes('cmdb') ||
+                                        f.name?.toLowerCase().includes('customer') ||
+                                        f.name?.toLowerCase().includes('asset')
+                                    )
+                                    : availableFields.all
+                            )}
+                            
+                            {renderFieldSelector(
+                                'Unit Asset',
+                                'unitAsset',
+                                'Das Asset-Feld, das die Unit (Turbine/Generator) referenziert.',
+                                availableFields.all.filter(f => 
+                                    f.type === 'array' || 
+                                    f.customType?.includes('assets') ||
+                                    f.customType?.includes('cmdb') ||
+                                    f.name?.toLowerCase().includes('unit') ||
+                                    f.name?.toLowerCase().includes('asset')
+                                ).length > 0 
+                                    ? availableFields.all.filter(f => 
+                                        f.type === 'array' || 
+                                        f.customType?.includes('assets') ||
+                                        f.customType?.includes('cmdb') ||
+                                        f.name?.toLowerCase().includes('unit') ||
+                                        f.name?.toLowerCase().includes('asset')
+                                    )
+                                    : availableFields.all
+                            )}
                         </div>
                         
                         {/* Manual Field ID Input */}
@@ -652,6 +704,11 @@ function App() {
                             <li>
                                 <strong>Feld-Zuordnungen:</strong> Wählen Sie die Custom Fields aus Ihrem 
                                 Jira-Projekt aus. Die Field-IDs haben das Format "customfield_XXXXX".
+                            </li>
+                            <li>
+                                <strong>Asset-Felder:</strong> Die Customer- und Unit-Felder müssen auf 
+                                JSM Assets Custom Fields zeigen, die Asset-Objekte referenzieren. 
+                                Die App lädt dann die vollständigen Asset-Attribute (Name, Seriennummer, etc.).
                             </li>
                             <li>
                                 <strong>Cache:</strong> Aktiviertes Caching reduziert API-Aufrufe und 

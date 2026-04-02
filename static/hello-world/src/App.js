@@ -437,10 +437,44 @@ function AppContent() {
 
     // Render a unit pipeline row
     const renderUnitPipeline = (unit) => {
+        // Get extended unit info from Asset data if available
+        const unitAsset = unit.unitAsset;
+        const hasAssetData = unitAsset && unitAsset.fromAsset;
+        
+        // Build unit display name with optional model/MW info from Asset
+        let unitDisplayName = unit.unitName;
+        if (hasAssetData && (unitAsset.model || unitAsset.mw)) {
+            const details = [
+                unitAsset.model,
+                unitAsset.mw ? `${unitAsset.mw} MW` : null
+            ].filter(Boolean).join(', ');
+            if (details) {
+                unitDisplayName = `${unit.unitName} (${details})`;
+            }
+        }
+        
+        // Build tooltip with full Asset details
+        const unitTooltip = hasAssetData 
+            ? [
+                `Serial: ${unitAsset.serialNumber || unit.unitName}`,
+                unitAsset.model ? `Model: ${unitAsset.model}` : null,
+                unitAsset.mw ? `Power: ${unitAsset.mw} MW` : null,
+                unitAsset.oem ? `OEM: ${unitAsset.oem}` : null,
+                unitAsset.site ? `Site: ${unitAsset.site}` : null,
+                unitAsset.objectKey ? `Asset: ${unitAsset.objectKey}` : null
+            ].filter(Boolean).join('\n')
+            : unit.unitName;
+        
         return (
             <div key={unit.unitKey} className="unit-pipeline">
                 <div className="unit-header">
-                    <span className="unit-name">📦 {unit.unitName}</span>
+                    <span 
+                        className={`unit-name ${hasAssetData ? 'has-asset-data' : ''}`}
+                        title={unitTooltip}
+                    >
+                        📦 {unitDisplayName}
+                        {hasAssetData && <span className="asset-badge" title="Daten aus JSM Asset">✓</span>}
+                    </span>
                     <span className="unit-service">{unit.serviceType}</span>
                     {/* Show team badge if team is assigned */}
                     {unit.team && (

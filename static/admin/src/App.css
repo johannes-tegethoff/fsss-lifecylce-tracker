@@ -510,6 +510,17 @@
     border-top: none;
 }
 
+.section-note {
+    font-size: 12px;
+    color: #6B778C;
+    margin: -4px 0 12px 0;
+    line-height: 1.5;
+    padding: 8px 12px;
+    background: #F4F5F7;
+    border-radius: 4px;
+    border-left: 3px solid #0052CC;
+}
+
 .field-select {
     padding: 10px 14px;
     border: 2px solid #DFE1E6;

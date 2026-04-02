@@ -41,7 +41,11 @@ const DEFAULT_FIELD_MAPPINGS = {
     overhaulEnd: 'customfield_10149',
     startOfCommissioning: 'customfield_10150',
     // Team field for filtering
-    team: 'customfield_10001'
+    team: 'customfield_10001',
+    // Asset reference fields (JSM Assets objects)
+    // These fields contain references to Asset objects (Customer, Unit)
+    customerAsset: 'customfield_10246',  // Customer Asset reference
+    unitAsset: 'customfield_10245'       // Unit Asset reference (Turbine/Generator)
 };
 
 /**
@@ -405,7 +409,7 @@ const LINK_TYPES = {
  * This function is called at runtime to get the current field configuration.
  * 
  * @param {Object} settings - The app settings object (or null)
- * @returns {Object} Field mappings object with date fields and team field
+ * @returns {Object} Field mappings object with date fields, team field, and asset fields
  */
 function getFieldMappings(settings) {
     const mappings = settings?.fieldMappings || DEFAULT_FIELD_MAPPINGS;
@@ -416,7 +420,12 @@ function getFieldMappings(settings) {
             overhaulEnd: mappings.overhaulEnd || DEFAULT_FIELD_MAPPINGS.overhaulEnd,
             startOfCommissioning: mappings.startOfCommissioning || DEFAULT_FIELD_MAPPINGS.startOfCommissioning
         },
-        teamField: mappings.team || DEFAULT_FIELD_MAPPINGS.team
+        teamField: mappings.team || DEFAULT_FIELD_MAPPINGS.team,
+        // Asset reference fields - these contain JSM Assets object references
+        assetFields: {
+            customerAsset: mappings.customerAsset || DEFAULT_FIELD_MAPPINGS.customerAsset,
+            unitAsset: mappings.unitAsset || DEFAULT_FIELD_MAPPINGS.unitAsset
+        }
     };
 }
 
@@ -513,6 +522,189 @@ function parseSummary(summary) {
 }
 
 /**
+ * Extract Asset references from Issue custom fields.
+ * 
+ * Asset fields in Jira contain an array of objects with the following structure:
+ * [
+ *   {
+ *     "workspaceId": "...",
+ *     "id": "123",
+ *     "objectId": "123",
+ *     "objectKey": "CUS-123",
+ *     "objectType": { "name": "Customer", ... },
+ *     "label": "Customer Name"
+ *   }
+ * ]
+ * 
+ * @param {Object} issue - The Jira issue object
+ * @param {Object} assetFields - The configured asset field mappings
+ * @returns {Object} Extracted asset references { customer, unit }
+ */
+function extractAssetReferences(issue, assetFields) {
+    const fields = issue.fields || {};
+    
+    // Extract Customer Asset reference
+    const customerFieldValue = fields[assetFields.customerAsset];
+    let customer = null;
+    if (customerFieldValue && Array.isArray(customerFieldValue) && customerFieldValue.length > 0) {
+        const firstCustomer = customerFieldValue[0];
+        customer = {
+            id: firstCustomer.objectId || firstCustomer.id,
+            objectKey: firstCustomer.objectKey,
+            label: firstCustomer.label || firstCustomer.name,
+            workspaceId: firstCustomer.workspaceId,
+            objectType: firstCustomer.objectType?.name || 'Customer'
+        };
+    }
+    
+    // Extract Unit Asset reference
+    const unitFieldValue = fields[assetFields.unitAsset];
+    let unit = null;
+    if (unitFieldValue && Array.isArray(unitFieldValue) && unitFieldValue.length > 0) {
+        const firstUnit = unitFieldValue[0];
+        unit = {
+            id: firstUnit.objectId || firstUnit.id,
+            objectKey: firstUnit.objectKey,
+            label: firstUnit.label || firstUnit.name,
+            workspaceId: firstUnit.workspaceId,
+            objectType: firstUnit.objectType?.name || 'Unit'
+        };
+    }
+    
+    return { customer, unit };
+}
+
+/**
+ * Fetch full Asset details from the Assets API using the new CMDB scopes.
+ * This function retrieves all attributes of an Asset object.
+ * 
+ * Note: The Assets API can return 3xx redirects which need to be handled manually in Forge.
+ * 
+ * @param {string} workspaceId - The Assets workspace ID
+ * @param {string} cloudId - The Atlassian Cloud ID
+ * @param {string} objectId - The Asset object ID to fetch
+ * @returns {Promise<Object|null>} Full asset details or null if not found
+ */
+async function fetchAssetDetails(workspaceId, cloudId, objectId) {
+    if (!workspaceId || !cloudId || !objectId) {
+        console.log(`[fetchAssetDetails] Missing parameters: workspaceId=${workspaceId}, cloudId=${cloudId}, objectId=${objectId}`);
+        return null;
+    }
+    
+    console.log(`[fetchAssetDetails] Fetching asset ${objectId} from workspace ${workspaceId}`);
+    
+    try {
+        // Use the Assets REST API via the gateway
+        // URL format: https://api.atlassian.com/jsm/assets/workspace/{workspaceId}/v1/object/{objectId}
+        const url = `https://api.atlassian.com/jsm/assets/workspace/${workspaceId}/v1/object/${objectId}`;
+        
+        // Use asApp() with the new CMDB scopes for backend requests
+        const response = await api.asApp().requestJira(route`${url}`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        // Handle redirects manually (Forge doesn't auto-follow 3xx)
+        if (response.status >= 300 && response.status < 400) {
+            const redirectUrl = response.headers.get('Location');
+            console.log(`[fetchAssetDetails] Received redirect to: ${redirectUrl}`);
+            
+            if (redirectUrl) {
+                const redirectResponse = await api.asApp().requestJira(route`${redirectUrl}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!redirectResponse.ok) {
+                    console.error(`[fetchAssetDetails] Redirect failed for ${objectId}: ${redirectResponse.status}`);
+                    return null;
+                }
+                
+                const asset = await redirectResponse.json();
+                return parseAssetResponse(asset);
+            }
+        }
+        
+        if (!response.ok) {
+            console.error(`[fetchAssetDetails] Failed to fetch asset ${objectId}: ${response.status}`);
+            
+            // Try alternative API path if the first one fails
+            // Some Forge environments require the /ex/jira/{cloudId} prefix
+            const altUrl = `https://api.atlassian.com/ex/jira/${cloudId}/jsm/assets/workspace/${workspaceId}/v1/object/${objectId}`;
+            console.log(`[fetchAssetDetails] Trying alternative URL: ${altUrl}`);
+            
+            const altResponse = await api.fetch(altUrl, {
+                headers: { 'Accept': 'application/json' }
+            });
+            
+            if (!altResponse.ok) {
+                console.error(`[fetchAssetDetails] Alternative URL also failed: ${altResponse.status}`);
+                return null;
+            }
+            
+            const asset = await altResponse.json();
+            return parseAssetResponse(asset);
+        }
+        
+        const asset = await response.json();
+        return parseAssetResponse(asset);
+        
+    } catch (error) {
+        console.error(`[fetchAssetDetails] Error fetching asset ${objectId}:`, error);
+        return null;
+    }
+}
+
+/**
+ * Parse the raw Asset API response into a simplified structure.
+ * Extracts all attributes into a key-value map for easy access.
+ * 
+ * @param {Object} asset - Raw asset object from the API
+ * @returns {Object} Parsed asset with id, objectKey, label, objectType, and attributes
+ */
+function parseAssetResponse(asset) {
+    if (!asset) return null;
+    
+    // Extract attributes into a simple key-value map
+    const attributes = {};
+    for (const attr of (asset.attributes || [])) {
+        // Get attribute name from objectTypeAttribute or use the ID
+        const attrName = attr.objectTypeAttribute?.name || `attr_${attr.objectTypeAttributeId}`;
+        
+        // Get attribute values - can be simple values or references to other objects
+        const values = (attr.objectAttributeValues || []).map(v => {
+            // If this is a reference to another object, include both the display value and the reference
+            if (v.referencedObject) {
+                return {
+                    displayValue: v.displayValue,
+                    referencedObject: {
+                        id: v.referencedObject.id,
+                        objectKey: v.referencedObject.objectKey,
+                        label: v.referencedObject.label
+                    }
+                };
+            }
+            // Simple value
+            return v.displayValue || v.value;
+        });
+        
+        // If single value, don't wrap in array
+        attributes[attrName] = values.length === 1 ? values[0] : values;
+    }
+    
+    return {
+        id: asset.id,
+        objectKey: asset.objectKey,
+        label: asset.label || asset.name,
+        objectType: asset.objectType?.name,
+        workspaceId: asset.workspaceId,
+        created: asset.created,
+        updated: asset.updated,
+        attributes
+    };
+}
+
+/**
  * Fetch all Offers/Orders from a Jira project using JQL
  * @param {string} projectKey - The Jira project key (e.g., 'FSSS')
  * @param {Object} fieldMappings - The configured field mappings
@@ -542,16 +734,19 @@ async function fetchOffersOrders(projectKey, fieldMappings) {
             // Use the new /rest/api/3/search/jql endpoint with GET method
             // Build query parameters - fields must be comma-separated for GET
             // Note: Do NOT use encodeURIComponent - the route template handles encoding
-            // Include configured date fields and team field from settings
-            const { dateFields, teamField } = fieldMappings;
+            // Include configured date fields, team field, and asset fields from settings
+            const { dateFields, teamField, assetFields } = fieldMappings;
             const customFields = [
+                // Date fields
                 dateFields.stopOfUnit,
                 dateFields.overhaulStart,
                 dateFields.overhaulEnd,
                 dateFields.startOfCommissioning,
+                // Team field
                 teamField,
-                'customfield_10245',  // Additional asset fields
-                'customfield_10246'
+                // Asset reference fields (Customer and Unit)
+                assetFields.customerAsset,
+                assetFields.unitAsset
             ].filter(f => f).join(',');
             
 const fieldsParam = `summary,issuetype,issuelinks,status,${customFields}`;
@@ -784,9 +979,82 @@ async function buildCustomerLifecycleData(projectKey, cloudId, fieldMappings) {
     // Step 2: Fetch all Offers/Orders with configured field mappings
     const allIssues = await fetchOffersOrders(projectKey, fieldMappings);
     
-    // Step 3-5: SKIPPED - We now parse Customer/Unit from Summary instead of fetching Assets
-    // This significantly speeds up the loading time
-    console.log(`[buildCustomerLifecycleData] Using summary parsing instead of Asset lookups`);
+    // Step 3: Extract Asset references from all issues and collect unique IDs
+    // We'll fetch full details for each unique Customer and Unit asset
+    console.log(`[buildCustomerLifecycleData] Extracting Asset references from ${allIssues.length} issues`);
+    
+    const { assetFields } = fieldMappings;
+    const customerAssetIds = new Map(); // id -> basic reference info
+    const unitAssetIds = new Map();     // id -> basic reference info
+    
+    // First pass: collect all unique asset IDs
+    for (const issue of allIssues) {
+        const assetRefs = extractAssetReferences(issue, assetFields);
+        
+        if (assetRefs.customer?.id) {
+            customerAssetIds.set(assetRefs.customer.id, assetRefs.customer);
+        }
+        if (assetRefs.unit?.id) {
+            unitAssetIds.set(assetRefs.unit.id, assetRefs.unit);
+        }
+    }
+    
+    console.log(`[buildCustomerLifecycleData] Found ${customerAssetIds.size} unique customers, ${unitAssetIds.size} unique units`);
+    
+    // Step 4: Batch-fetch full Customer Asset details
+    const customerCache = {}; // id -> full asset details
+    const customerTasks = Array.from(customerAssetIds.entries()).map(([id, ref]) => async () => {
+        // Use workspaceId from the reference if available, otherwise use the global one
+        const assetWorkspaceId = ref.workspaceId || workspaceId;
+        const details = await fetchAssetDetails(assetWorkspaceId, cloudId, id);
+        if (details) {
+            customerCache[id] = details;
+        } else {
+            // Fallback: use basic reference info if full fetch fails
+            customerCache[id] = {
+                id: ref.id,
+                objectKey: ref.objectKey,
+                label: ref.label,
+                objectType: ref.objectType || 'Customer',
+                attributes: {},
+                _fallback: true
+            };
+        }
+        return details;
+    });
+    
+    if (customerTasks.length > 0) {
+        console.log(`[buildCustomerLifecycleData] Fetching ${customerTasks.length} Customer asset details...`);
+        await executeBatched(customerTasks, MAX_PARALLEL_REQUESTS);
+        console.log(`[buildCustomerLifecycleData] Customer cache populated with ${Object.keys(customerCache).length} entries`);
+    }
+    
+    // Step 5: Batch-fetch full Unit Asset details
+    const unitCache = {}; // id -> full asset details
+    const unitTasks = Array.from(unitAssetIds.entries()).map(([id, ref]) => async () => {
+        const assetWorkspaceId = ref.workspaceId || workspaceId;
+        const details = await fetchAssetDetails(assetWorkspaceId, cloudId, id);
+        if (details) {
+            unitCache[id] = details;
+        } else {
+            // Fallback: use basic reference info if full fetch fails
+            unitCache[id] = {
+                id: ref.id,
+                objectKey: ref.objectKey,
+                label: ref.label,
+                objectType: ref.objectType || 'Unit',
+                attributes: {},
+                _fallback: true
+            };
+        }
+        return details;
+    });
+    
+    if (unitTasks.length > 0) {
+        console.log(`[buildCustomerLifecycleData] Fetching ${unitTasks.length} Unit asset details...`);
+        await executeBatched(unitTasks, MAX_PARALLEL_REQUESTS);
+        console.log(`[buildCustomerLifecycleData] Unit cache populated with ${Object.keys(unitCache).length} entries`);
+    }
     
     // Step 6: Fetch all linked Epics (collect unique keys first, then fetch in BATCHES)
     // Using batched execution to prevent overwhelming the API and avoid timeouts
@@ -822,7 +1090,7 @@ async function buildCustomerLifecycleData(projectKey, cloudId, fieldMappings) {
     // Group by Customer -> Unit -> Pipeline (Offer -> Offer-Epic -> Order -> Order-Epic)
     console.log(`[buildCustomerLifecycleData] Building pipeline structure`);
     
-    // First pass: collect all issues and their parsed data
+    // First pass: collect all issues and their data (using real Asset data)
     const issueMap = {}; // key -> issue data
     
     // Get field IDs from mappings
@@ -830,7 +1098,66 @@ async function buildCustomerLifecycleData(projectKey, cloudId, fieldMappings) {
     
     for (const issue of allIssues) {
         const f = issue.fields;
+        
+        // Extract Asset references from the issue's custom fields
+        const assetRefs = extractAssetReferences(issue, assetFields);
+        
+        // Get full Customer details from cache
+        const customerData = assetRefs.customer?.id ? customerCache[assetRefs.customer.id] : null;
+        
+        // Get full Unit details from cache
+        const unitData = assetRefs.unit?.id ? unitCache[assetRefs.unit.id] : null;
+        
+        // Fallback: parse from summary if no Asset data available
+        // This ensures backward compatibility with issues that don't have Asset fields set
         const parsed = parseSummary(f?.summary);
+        
+        // Build the resolved customer/unit info using Asset data with summary fallback
+        const resolvedCustomer = customerData ? {
+            id: customerData.id,
+            objectKey: customerData.objectKey,
+            label: customerData.label,
+            name: customerData.label, // Alias for convenience
+            attributes: customerData.attributes || {},
+            fromAsset: true
+        } : (parsed.customer ? {
+            id: parsed.customer, // Use name as ID for fallback
+            label: parsed.customer,
+            name: parsed.customer,
+            attributes: {},
+            fromAsset: false,
+            _parsedFromSummary: true
+        } : null);
+        
+        const resolvedUnit = unitData ? {
+            id: unitData.id,
+            objectKey: unitData.objectKey,
+            label: unitData.label,
+            name: unitData.label,
+            // Extract specific attributes commonly needed
+            serialNumber: unitData.attributes?.['Serial Number'] || unitData.attributes?.['Name'] || unitData.label,
+            model: unitData.attributes?.['Model'] || unitData.attributes?.['Type'] || null,
+            mw: unitData.attributes?.['MW'] || unitData.attributes?.['Power'] || null,
+            oem: unitData.attributes?.['OEM'] || unitData.attributes?.['Manufacturer'] || null,
+            site: unitData.attributes?.['Site'] || unitData.attributes?.['Location'] || null,
+            attributes: unitData.attributes || {},
+            fromAsset: true
+        } : (parsed.unit ? {
+            id: parsed.unit,
+            label: parsed.unit,
+            name: parsed.unit,
+            serialNumber: parsed.unit,
+            model: null,
+            mw: null,
+            oem: null,
+            site: null,
+            attributes: {},
+            fromAsset: false,
+            _parsedFromSummary: true
+        } : null);
+        
+        // ServiceType is still parsed from summary (not stored as Asset)
+        const serviceType = parsed.serviceType;
         
         // Extract date fields using configured field mappings
         const dates = {
@@ -999,6 +1326,11 @@ async function buildCustomerLifecycleData(projectKey, cloudId, fieldMappings) {
             type: f?.issuetype?.name,
             summary: f?.summary,
             status: f?.status?.name,
+            // Real Asset data (with fallback to parsed summary)
+            customer: resolvedCustomer,
+            unit: resolvedUnit,
+            serviceType: serviceType,
+            // Legacy parsed data (for backward compatibility)
             parsed,
             dates,
             team,  // Team assigned to this issue (primarily set on Offers)
@@ -1022,34 +1354,61 @@ async function buildCustomerLifecycleData(projectKey, cloudId, fieldMappings) {
     
     // Group by Customer and Unit
     for (const [key, issue] of Object.entries(issueMap)) {
-        const customerName = issue.parsed.customer;
-        const unitName = issue.parsed.unit;
-        const serviceType = issue.parsed.serviceType;
+        // Use resolved Asset data (with fallback to parsed summary)
+        const customerData = issue.customer;
+        const unitData = issue.unit;
+        const serviceType = issue.serviceType;
         
-        if (!customerName) {
+        // Skip issues without customer data
+        if (!customerData) {
             noCustomer.push(issue);
             continue;
         }
         
+        // Use customer ID (from Asset) or label as the grouping key
+        const customerId = customerData.id || customerData.label;
+        const customerLabel = customerData.label || customerData.name || customerId;
+        
         // Create customer if not exists
-        if (!customerMap[customerName]) {
-            customerMap[customerName] = {
+        if (!customerMap[customerId]) {
+            customerMap[customerId] = {
                 customer: {
-                    id: customerName,
-                    label: customerName
+                    id: customerId,
+                    objectKey: customerData.objectKey || null,
+                    label: customerLabel,
+                    // Include full customer attributes from Asset
+                    attributes: customerData.attributes || {},
+                    fromAsset: customerData.fromAsset || false
                 },
                 units: {}
             };
         }
         
-        // Create unit key (Unit + ServiceType combination)
-        const unitKey = `${unitName || 'Unknown'} - ${serviceType || 'Unknown'}`;
+        // Get unit label for grouping
+        const unitLabel = unitData?.label || unitData?.serialNumber || 'Unknown';
         
-        if (!customerMap[customerName].units[unitKey]) {
-            customerMap[customerName].units[unitKey] = {
-                unitName: unitName,
-                serviceType: serviceType,
+        // Create unit key (Unit + ServiceType combination)
+        const unitKey = `${unitLabel} - ${serviceType || 'Unknown'}`;
+        
+        if (!customerMap[customerId].units[unitKey]) {
+            customerMap[customerId].units[unitKey] = {
+                // Unit identification
+                unitName: unitLabel,
                 unitKey: unitKey,
+                serviceType: serviceType,
+                // Full Unit Asset data (if available)
+                unitAsset: unitData ? {
+                    id: unitData.id,
+                    objectKey: unitData.objectKey,
+                    label: unitData.label,
+                    serialNumber: unitData.serialNumber,
+                    model: unitData.model,
+                    mw: unitData.mw,
+                    oem: unitData.oem,
+                    site: unitData.site,
+                    attributes: unitData.attributes || {},
+                    fromAsset: unitData.fromAsset || false
+                } : null,
                 // Pipeline stages
                 offer: null,
                 offerEpic: null,
@@ -1067,7 +1426,7 @@ async function buildCustomerLifecycleData(projectKey, cloudId, fieldMappings) {
             };
         }
         
-        const unit = customerMap[customerName].units[unitKey];
+        const unit = customerMap[customerId].units[unitKey];
         
         // Update dates (take first non-null value)
         if (issue.dates.stopOfUnit) unit.dates.stopOfUnit = issue.dates.stopOfUnit;
