@@ -2,11 +2,50 @@
  * Service Lifecycle Tracker - Pipeline UI Styles
  */
 
+/* Google Material Icons - Font loaded via <link> in index.html */
+/* @import removed because CSP blocks it - using <link> tag instead */
+
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
+
+/* Material Icons base styling */
+.material-icons,
+.material-icons-outlined {
+    font-family: 'Material Icons';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 18px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    vertical-align: middle;
+}
+
+.material-icons-outlined {
+    font-family: 'Material Icons Outlined';
+}
+
+/* Icon size variants */
+.icon-sm { font-size: 16px; }
+.icon-md { font-size: 20px; }
+.icon-lg { font-size: 24px; }
+
+/* Icon color variants */
+.icon-green { color: #36B37E; }
+.icon-yellow { color: #FFAB00; }
+.icon-orange { color: #FF8B00; }
+.icon-red { color: #DE350B; }
+.icon-gray { color: #97A0AF; }
+.icon-blue { color: #0052CC; }
 
 .app {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -592,6 +631,32 @@
 .dot-green { background: #36B37E; }
 .dot-gray { background: #DFE1E6; }
 .dot-red { background: #DE350B; }
+
+/* AtlasKit Icon Styling for Legend */
+.legend-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+}
+
+.legend-icon-yellow {
+    color: #FFAB00;
+}
+
+.legend-icon-orange {
+    color: #FF8B00;
+}
+
+.legend-icon-green {
+    color: #36B37E;
+}
+
+.legend-icon-gray {
+    color: #97A0AF;
+}
 
 /* === Customer Sections === */
 .customer-list {

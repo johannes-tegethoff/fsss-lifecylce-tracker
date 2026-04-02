@@ -30,6 +30,9 @@ permissions:
     fetch:
       backend:
         - address: api.atlassian.com
+      client:
+        - address: fonts.googleapis.com
+        - address: fonts.gstatic.com
 app:
   runtime:
     name: nodejs24.x
