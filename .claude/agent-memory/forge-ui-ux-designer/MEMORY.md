@@ -1,0 +1,1 @@
+- [Lifecycle Tracker Project Context](project_lifecycle_tracker.md) — JSM Forge Custom UI app for Siemens Energy FSSS asset lifecycle tracking; Pipeline/Timeline/KeyData views

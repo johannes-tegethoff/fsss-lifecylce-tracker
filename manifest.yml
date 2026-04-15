@@ -26,10 +26,13 @@ permissions:
     - read:servicedesk-request
     - read:group:jira  # Required for checking user group membership (access control)
     - storage:app      # Required for storing app configuration (allowed groups, field mappings)
-    # Assets/CMDB API Scopes - Required for reading Customer and Unit asset data
     - read:cmdb-object:jira     # Read Asset objects (Customer, Unit details)
-    - read:cmdb-schema:jira     # Read Asset schemas (for attribute names)
-  external:
+    - read:cmdb-schema:jira
+    - read:cmdb-attribute:jira     # Read Asset schemas (for attribute names)
+    # Note: read:servicedesk-request is already included above and provides access to:
+    # - /rest/servicedeskapi/assets/workspace (to get workspace ID)
+    # The cmdb scopes above provide access to the Assets AQL API
+  external: 
     fetch:
       backend:
         - address: api.atlassian.com
