@@ -139,7 +139,7 @@ export async function fetchOffersOrders(projectKey, fieldMappings) {
 
     try {
         while (true) {
-            const response = await api.asUser().requestJira(
+            const response = await api.asApp().requestJira(
                 route`/rest/api/3/search/jql?jql=${jql}&fields=${fieldsParam}&startAt=${startAt}&maxResults=${maxResults}`
             );
 
@@ -164,7 +164,7 @@ export async function fetchOffersOrders(projectKey, fieldMappings) {
 
         // Diagnostic: if no issues found, log available issue types to help debugging
         if (allIssues.length === 0) {
-            const debugResponse = await api.asUser().requestJira(
+            const debugResponse = await api.asApp().requestJira(
                 route`/rest/api/3/search/jql?jql=project = ${projectKey} ORDER BY created DESC&fields=summary,issuetype&maxResults=10`
             );
             const debugData = await debugResponse.json();
@@ -189,7 +189,7 @@ async function fetchIssueLinks(issueKeys) {
     const linksMap = new Map();
     const tasks = issueKeys.map(key => async () => {
         try {
-            const resp = await api.asUser().requestJira(
+            const resp = await api.asApp().requestJira(
                 route`/rest/api/3/issue/${key}?fields=issuelinks`
             );
             if (!resp.ok) { linksMap.set(key, []); return; }

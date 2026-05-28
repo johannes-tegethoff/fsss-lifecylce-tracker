@@ -40,7 +40,7 @@ export async function checkUserGroupAccess(accountId) {
     }
 
     try {
-        const response = await api.asUser().requestJira(
+        const response = await api.asApp().requestJira(
             route`/rest/api/3/user/groups?accountId=${accountId}`
         );
 

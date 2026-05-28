@@ -110,13 +110,13 @@ export async function fetchAssetById(workspaceId, objectId, cloudId) {
 
     if (cloudId) {
         response = await tryFetch(() =>
-            api.asUser().requestJira(route`https://api.atlassian.com/ex/jira/${cloudId}/jsm/assets/workspace/${workspaceId}/v1/object/${objectId}`)
+            api.asApp().requestJira(route`https://api.atlassian.com/ex/jira/${cloudId}/jsm/assets/workspace/${workspaceId}/v1/object/${objectId}`)
         );
     }
 
     if (!response) {
         response = await tryFetch(() =>
-            api.asUser().requestJira(route`/gateway/api/jsm/assets/workspace/${workspaceId}/v1/object/${objectId}`)
+            api.asApp().requestJira(route`/gateway/api/jsm/assets/workspace/${workspaceId}/v1/object/${objectId}`)
         );
     }
 

@@ -6,13 +6,13 @@ import api, { route } from '@forge/api';
  */
 export async function fetchEpicWithTasks(epicKey) {
     try {
-        const epicResponse = await api.asUser().requestJira(
+        const epicResponse = await api.asApp().requestJira(
             route`/rest/api/3/issue/${epicKey}?fields=status,summary,issuetype,fixVersions,project`
         );
         const epic = await epicResponse.json();
 
         const childJql = `"Epic Link" = ${epicKey} OR parent = ${epicKey}`;
-        const childResponse = await api.asUser().requestJira(
+        const childResponse = await api.asApp().requestJira(
             route`/rest/api/3/search/jql?jql=${childJql}&fields=status,summary,issuetype&maxResults=50`
         );
         const children = await childResponse.json();
