@@ -1,50 +1,62 @@
-# Forge Hello World
+# Service Lifecycle Tracker
 
-This project contains a Forge app written in JavaScript that displays `Hello World!` in a Jira full page module.
+Forge App für Jira Cloud, die einen konsolidierten Überblick über Service-Angebote (Offers) und Aufträge (Orders) gruppiert nach Kunden bietet. Die App verknüpft Issues aus dem `FSSS`-Projekt mit den zugehörigen Epics in kundenspezifischen Projekten sowie mit Kunden-/Unit-Informationen aus JSM Assets und visualisiert den Fortschritt des gesamten Service-Lebenszyklus.
 
-See [developer.atlassian.com/platform/forge/](https://developer.atlassian.com/platform/forge) for documentation and tutorials explaining Forge.
+Details zum Konzept und Datenmodell siehe [CONCEPT.md](CONCEPT.md).
 
-See [Jira full page](https://developer.atlassian.com/platform/forge/manifest-reference/modules/jira-full-page/) for
-information on how to use this module. 
+## Module
 
-## Requirements
+- **Global Page** (`static/hello-world`) — Kunden-Übersicht mit Offers/Orders, Epic-Fortschritt und Statistik-Dashboard
+- **Admin Page** (`static/admin`) — Konfiguration der App (erlaubte Gruppen, Feld-Mappings)
+- **Backend** (`src/`) — Resolver, Jira/Assets-API-Anbindung und Caching
 
-See [Set up Forge](https://developer.atlassian.com/platform/forge/set-up-forge/) for instructions to get set up.
+## Aufbau
 
-## Quick start
-- Install top-level dependencies:
 ```
+src/
+  api/          Jira- und Assets-API-Clients
+  data/         Lifecycle-Datenaggregation
+  resolvers/    Forge-Resolver (lifecycle, settings, discovery)
+static/
+  hello-world/  Frontend der Global Page (React, AtlasKit)
+  admin/        Frontend der Admin Page (React, AtlasKit)
+```
+
+## Voraussetzungen
+
+- [Forge CLI](https://developer.atlassian.com/platform/forge/set-up-forge/) eingerichtet und bei Atlassian authentifiziert
+- Zugriff auf die Ziel-Jira-Instanz mit JSM Assets
+
+## Setup
+
+Abhängigkeiten installieren (Root sowie beide Frontends):
+
+```bash
 npm install
+npm install --prefix static/hello-world
+npm install --prefix static/admin
 ```
 
-- Install dependencies (inside of the `static/hello-world` directory):
-```
-npm install
+Frontends bauen:
+
+```bash
+npm run build --prefix static/hello-world
+npm run build --prefix static/admin
 ```
 
-- Modify your app by editing the files in `static/hello-world/src/`.
+Deployen und installieren:
 
-- Build your app (inside of the `static/hello-world` directory):
-```
-npm run build
-```
-
-- Deploy your app by running:
-```
+```bash
 forge deploy
-```
-
-- Install your app in an Atlassian site by running:
-```
 forge install
 ```
 
-### Notes
-- Use the `forge deploy` command when you want to persist code changes.
-- Use the `forge install` command when you want to install the app on a new site.
-- Once the app is installed on a site, the site picks up the new app changes you deploy without needing to rerun the install command.
+### Hinweise
+
+- `forge deploy` persistiert Code-Änderungen, `forge install` installiert die App neu auf einer Site.
+- Nach dem Deploy übernehmen bereits installierte Sites die Änderungen automatisch — ein erneutes `forge install` ist nicht nötig.
+- UI-Komponenten basieren auf **AtlasKit**, nicht auf Material UI — Material UI ist wegen der restriktiven CSP von Forge Custom UI Apps nicht nutzbar.
 
 ## Support
 
-See [Get help](https://developer.atlassian.com/platform/forge/get-help/) for how to get help and provide feedback.
-
+Siehe [Get help](https://developer.atlassian.com/platform/forge/get-help/) für Hilfe und Feedback zu Forge.
